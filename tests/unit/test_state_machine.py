@@ -17,7 +17,9 @@ from apps.bookings.state_machine import (
     SYSTEM,
     TRANSITIONS,
     Context,
+    available_targets,
     check_transition,
+    reason_required,
 )
 from apps.common.exceptions import DomainError
 
@@ -133,3 +135,37 @@ def test_invalid_transition_error_names_both_states():
     with pytest.raises(DomainError) as exc:
         check_transition(ctx(CANCELLED, ADMIN), CONFIRMED)
     assert exc.value.extra == {"from": CANCELLED, "to": CONFIRMED}
+
+
+# --- available_targets (drives dashboard buttons) -------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("status", "role", "now", "expected"),
+    [
+        (PENDING, PROVIDER, BEFORE, [CONFIRMED, CANCELLED]),
+        (PENDING, PROVIDER, AFTER, [CANCELLED]),  # too late to confirm, still cancellable
+        (CONFIRMED, ADMIN, BEFORE, [CANCELLED]),  # not started: cannot complete yet
+        (CONFIRMED, ADMIN, AFTER, [CANCELLED, COMPLETED]),
+        (PENDING, CUSTOMER, BEFORE, [CANCELLED]),
+        (PENDING, CUSTOMER, START - timedelta(hours=1), []),  # past the 24h deadline
+        (CANCELLED, ADMIN, BEFORE, []),
+        (COMPLETED, PROVIDER, AFTER, []),
+    ],
+)
+def test_available_targets(status, role, now, expected):
+    assert sorted(available_targets(ctx(status, role, now=now, reason=""))) == sorted(expected)
+
+
+def test_available_targets_agree_with_check_transition():
+    """Every offered action passes check_transition once a reason is supplied."""
+    for status, role, now in product(STATUSES, ROLES, (BEFORE, START, AFTER)):
+        for target in available_targets(ctx(status, role, now=now, reason="")):
+            check_transition(ctx(status, role, now=now, reason="sabab"), target)
+
+
+def test_reason_required_only_for_staff_cancel():
+    assert reason_required(PENDING, CANCELLED, PROVIDER)
+    assert reason_required(CONFIRMED, CANCELLED, ADMIN)
+    assert not reason_required(PENDING, CANCELLED, CUSTOMER)
+    assert not reason_required(PENDING, CONFIRMED, ADMIN)

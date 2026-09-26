@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from django.db.models import Q, QuerySet
+from django.db.models import Count, Q, QuerySet
 
 from apps.accounts.models import User
 
@@ -68,7 +68,15 @@ def filter_bookings(
     starts_from: datetime | None = None,
     starts_before: datetime | None = None,
     upcoming_after: datetime | None = None,
+    search: str = "",
 ) -> QuerySet[Booking]:
+    if search:
+        qs = qs.filter(
+            Q(customer__full_name__icontains=search)
+            | Q(customer__email__icontains=search)
+            | Q(customer__phone__icontains=search)
+            | Q(service_name__icontains=search)
+        )
     if statuses:
         qs = qs.filter(status__in=statuses)
     if provider_id:
@@ -95,3 +103,32 @@ def customer_tab(user: User, tab: str, *, now: datetime) -> QuerySet[Booking]:
             Q(status=Booking.Status.COMPLETED) | Q(status__in=ACTIVE_STATUSES, end_at__lte=now)
         ).order_by("-start_at")
     return qs.filter(status__in=ACTIVE_STATUSES, end_at__gt=now).order_by("start_at")
+
+
+def overlapping(qs: QuerySet[Booking], *, start: datetime, end: datetime) -> QuerySet[Booking]:
+    return qs.filter(start_at__lt=end, end_at__gt=start)
+
+
+def day_kpis(qs: QuerySet[Booking]) -> dict:
+    """Counts for the dashboard header; `qs` is already limited to one day and one viewer."""
+    counts = qs.aggregate(
+        total=Count("id"),
+        pending=Count("id", filter=Q(status=Booking.Status.PENDING)),
+        cancelled=Count("id", filter=Q(status=Booking.Status.CANCELLED)),
+    )
+    counts["booked"] = counts["total"] - counts["cancelled"]
+    counts["cancelled_pct"] = (
+        round(100 * counts["cancelled"] / counts["total"]) if counts["total"] else 0
+    )
+    return counts
+
+
+def upcoming_counts(field: str, *, now: datetime) -> dict:
+    """{provider_id or service_id: number of future active bookings} for deactivation warnings."""
+    rows = (
+        active_overlapping(start_at__gte=now)
+        .values(field)
+        .annotate(n=Count("id"))
+        .values_list(field, "n")
+    )
+    return dict(rows)

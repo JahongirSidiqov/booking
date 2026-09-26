@@ -37,6 +37,8 @@ Guard = Callable[[Context], None]
 class Transition:
     roles: frozenset[str]
     guard: Guard
+    # Roles that must explain themselves (staff cancelling: the customer deserves a reason).
+    reason_required_for: frozenset[str] = frozenset()
 
 
 def invalid(ctx: Context, to_status: str, why: str) -> DomainError:
@@ -72,19 +74,16 @@ def _cancel(ctx: Context) -> None:
                 422,
                 title="Bekor qilish muddati oʻtgan",
             )
-    elif ctx.actor_role in STAFF and not ctx.reason.strip():
-        # Staff may cancel at any time, but the customer deserves to know why.
-        raise DomainError(
-            "VALIDATION_ERROR",
-            "Kiritilgan maʼlumotlarni tekshiring.",
-            errors={"reason": ["Xodim yoki admin bekor qilganda sabab majburiy."]},
-        )
 
 
 TRANSITIONS: dict[tuple[str, str], Transition] = {
     (PENDING, CONFIRMED): Transition(frozenset({PROVIDER, ADMIN, SYSTEM}), _not_started),
-    (PENDING, CANCELLED): Transition(frozenset({CUSTOMER, PROVIDER, ADMIN, SYSTEM}), _cancel),
-    (CONFIRMED, CANCELLED): Transition(frozenset({CUSTOMER, PROVIDER, ADMIN, SYSTEM}), _cancel),
+    (PENDING, CANCELLED): Transition(
+        frozenset({CUSTOMER, PROVIDER, ADMIN, SYSTEM}), _cancel, STAFF
+    ),
+    (CONFIRMED, CANCELLED): Transition(
+        frozenset({CUSTOMER, PROVIDER, ADMIN, SYSTEM}), _cancel, STAFF
+    ),
     (CONFIRMED, COMPLETED): Transition(frozenset({PROVIDER, ADMIN}), _started),
 }
 
@@ -102,3 +101,32 @@ def check_transition(ctx: Context, to_status: str) -> None:
     if ctx.actor_role not in transition.roles:
         raise DomainError("FORBIDDEN", "Bu amalni bajarishga ruxsatingiz yoʻq.", 403)
     transition.guard(ctx)
+    if ctx.actor_role in transition.reason_required_for and not ctx.reason.strip():
+        raise DomainError(
+            "VALIDATION_ERROR",
+            "Kiritilgan maʼlumotlarni tekshiring.",
+            errors={"reason": ["Xodim yoki admin bekor qilganda sabab majburiy."]},
+        )
+
+
+def available_targets(ctx: Context) -> list[str]:
+    """Statuses `ctx.actor_role` could move the booking to right now (reason aside).
+
+    Drives which action buttons the dashboard shows, from the same table the service
+    enforces, so the UI never offers an action the server would refuse for time or role.
+    """
+    targets = []
+    for (from_status, to_status), transition in TRANSITIONS.items():
+        if from_status != ctx.status or ctx.actor_role not in transition.roles:
+            continue
+        try:
+            transition.guard(ctx)
+        except DomainError:
+            continue
+        targets.append(to_status)
+    return targets
+
+
+def reason_required(status: str, to_status: str, actor_role: str) -> bool:
+    transition = TRANSITIONS.get((status, to_status))
+    return bool(transition and actor_role in transition.reason_required_for)

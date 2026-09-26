@@ -72,4 +72,4 @@ def test_customer_constraint_violation_maps_to_409(haircut, sardor, monkeypatch)
     monkeypatch.setattr(services, "_create_locked", lose)
     with pytest.raises(DomainError) as exc:
         create(UserFactory(), haircut, sardor)
-    assert (exc.value.code, exc.value.status) == ("CUSTOMER_OVERLAP", 409)
+    assert (exc.value.code, exc.value.http_status) == ("CUSTOMER_OVERLAP", 409)

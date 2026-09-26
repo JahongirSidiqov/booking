@@ -298,7 +298,7 @@ def test_day_summary_applies_time_off():
 def test_edge_27_range_over_31_days_rejected():
     with pytest.raises(DomainError) as exc:
         summary(date(2026, 10, 1), date(2026, 12, 29))
-    assert (exc.value.code, exc.value.status) == ("RANGE_TOO_LARGE", 400)
+    assert (exc.value.code, exc.value.http_status) == ("RANGE_TOO_LARGE", 400)
 
 
 def test_range_of_exactly_31_days_allowed():

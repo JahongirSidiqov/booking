@@ -38,7 +38,7 @@ class DomainError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
-        self.status = status
+        self.http_status = status
         self.title = title or TITLES.get(code, message)
         self.errors = errors
         self.extra = extra or {}
@@ -90,9 +90,14 @@ def problem_exception_handler(exc, context):
 
     if isinstance(exc, DomainError):
         body = problem(
-            exc.code, exc.status, exc.message, title=exc.title, errors=exc.errors, extra=exc.extra
+            exc.code,
+            exc.http_status,
+            exc.message,
+            title=exc.title,
+            errors=exc.errors,
+            extra=exc.extra,
         )
-        return Response(body, status=exc.status)
+        return Response(body, status=exc.http_status)
 
     if isinstance(exc, Http404):
         exc = exceptions.NotFound()

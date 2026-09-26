@@ -1,0 +1,90 @@
+{% extends "dashboard/base.html" %}
+{% load navbat %}
+{% block title %}Bugun{% endblock %}
+{% block dashboard %}
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <p class="eyebrow">{% if is_today %}Bugun{% else %}Kun{% endif %}</p>
+    <h1 class="mt-1 text-2xl md:text-3xl">{{ day|short_day }}</h1>
+  </div>
+  <nav class="flex items-center gap-1" aria-label="Kunni tanlash">
+    <a class="btn btn-secondary size-11 px-0" href="?date={{ prev_day|date:'Y-m-d' }}" aria-label="Oldingi kun">{% icon "chevron-left" 18 %}</a>
+    {% if not is_today %}<a class="btn btn-secondary" href="{% url 'web:dashboard' %}">Bugun</a>{% endif %}
+    <a class="btn btn-secondary size-11 px-0" href="?date={{ next_day|date:'Y-m-d' }}" aria-label="Keyingi kun">{% icon "chevron-right" 18 %}</a>
+  </nav>
+</div>
+
+<dl class="mt-6 grid grid-cols-3 gap-3">
+  <div class="card p-4">
+    <dt class="text-sm text-muted">Bronlar</dt>
+    <dd class="mt-1 text-2xl font-semibold tabular-nums">{{ kpis.booked }}</dd>
+  </div>
+  <div class="card p-4">
+    <dt class="text-sm text-muted">Kutilmoqda</dt>
+    <dd class="mt-1 text-2xl font-semibold tabular-nums {% if kpis.pending %}text-warning{% endif %}">{{ kpis.pending }}</dd>
+  </div>
+  <div class="card p-4">
+    <dt class="text-sm text-muted">Bekor qilingan</dt>
+    <dd class="mt-1 text-2xl font-semibold tabular-nums">{{ kpis.cancelled_pct }}%</dd>
+    <dd class="text-xs text-muted tabular-nums">{{ kpis.cancelled }} / {{ kpis.total }}</dd>
+  </div>
+</dl>
+
+{% if unlinked %}
+  <div class="mt-6">
+    {% include "components/empty_state.html" with icon_name="user" title="Xodim profili bogʻlanmagan" body="Administrator akkauntingizni xodim profiliga bogʻlagach, jadvalingiz shu yerda koʻrinadi." %}
+  </div>
+{% elif not columns %}
+  <div class="mt-6">
+    {% include "components/empty_state.html" with icon_name="user" title="Faol xodimlar yoʻq" body="Xodim qoʻshing va unga ish vaqtini belgilang." %}
+  </div>
+{% else %}
+  <section class="card mt-6 overflow-x-auto" aria-label="Kun jadvali">
+    <div class="flex w-full">
+      <div class="sticky left-0 z-20 w-14 shrink-0 border-r border-border bg-surface">
+        <div class="h-12 border-b border-border"></div>
+        <div class="relative" style="height: {{ axis_px }}px">
+          {% for hour in hours %}
+            <span class="absolute right-2 -translate-y-1/2 text-xs text-muted tabular-nums" style="top: {% widthratio forloop.counter0 1 64 %}px">{% if not forloop.first %}{{ hour|stringformat:"02d" }}:00{% endif %}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% for column in columns %}
+        <div class="min-w-44 flex-1 shrink-0 basis-44 border-r border-border last:border-r-0 md:basis-52">
+          <div class="flex h-12 items-center gap-2 border-b border-border px-3">
+            <span class="size-2.5 shrink-0 rounded-full" style="background: {{ column.provider.color }}" aria-hidden="true"></span>
+            <span class="truncate text-sm font-semibold">{{ column.provider.name }}</span>
+          </div>
+          <div class="relative bg-bg-subtle" style="height: {{ axis_px }}px">
+            {% for window in column.windows %}
+              <div class="absolute inset-x-0 bg-surface" style="top: {{ window.top }}; height: {{ window.height }}" aria-hidden="true"></div>
+            {% endfor %}
+            <div class="pointer-events-none absolute inset-0" aria-hidden="true"
+                 style="background-image: repeating-linear-gradient(to bottom, var(--color-border) 0 1px, transparent 1px 64px)"></div>
+            {% for block in column.blocks %}
+              {% with b=block.booking %}
+                <a href="{% url 'web:dashboard_booking' b.pk %}"
+                   class="absolute inset-x-1 z-10 overflow-hidden rounded-md border-l-4 px-2 py-1 text-xs shadow-sm transition-shadow hover:shadow-md"
+                   style="top: {{ block.top }}; height: {{ block.height }}; border-color: {{ column.provider.color }}; background: color-mix(in srgb, {{ column.provider.color }} 12%, white);"
+                   aria-label="{{ b.start_at|local_time:display_tz }}, {{ b.customer.full_name }}, {{ b.service_name }}, {{ b.status|status_label }}">
+                  <span class="block font-semibold tabular-nums">{{ b.start_at|local_time:display_tz }}–{{ b.end_at|local_time:display_tz }}</span>
+                  <span class="block truncate">{{ b.customer.full_name }}</span>
+                  <span class="block truncate text-muted">{{ b.service_name }}{% if b.status == "pending" %} · Kutilmoqda{% elif b.status == "completed" %} · Bajarilgan{% endif %}</span>
+                </a>
+              {% endwith %}
+            {% endfor %}
+            {% if now_line is not None %}
+              <div class="absolute inset-x-0 z-20 h-0.5 bg-danger" style="top: {{ now_line }}" aria-hidden="true"></div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+  <p class="mt-3 flex items-center gap-4 text-sm text-muted">
+    <span class="flex items-center gap-1.5"><span class="size-3 rounded-sm border border-border bg-surface"></span>Ish vaqti</span>
+    <span class="flex items-center gap-1.5"><span class="size-3 rounded-sm bg-bg-subtle"></span>Yopiq</span>
+    {% if now_line is not None %}<span class="flex items-center gap-1.5"><span class="h-0.5 w-3 bg-danger"></span>Hozir</span>{% endif %}
+  </p>
+{% endif %}
+{% endblock %}

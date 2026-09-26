@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load navbat %}
+{% block main_class %}w-full{% endblock %}
+{% block content %}
+<div class="container-page flex gap-8 py-6 md:py-8" x-data="{ drawer: false }" @keydown.escape.window="drawer = false">
+  {# Sidebar: 240px column from lg up, a drawer with overlay below it. #}
+  <div class="fixed inset-0 z-40 bg-overlay lg:hidden" x-show="drawer" x-transition.opacity x-cloak @click="drawer = false"></div>
+  <aside id="dashboard-nav"
+         class="fixed inset-y-0 left-0 z-50 w-[272px] -translate-x-full overflow-y-auto border-r border-border bg-surface p-4 transition-transform duration-300 lg:static lg:z-auto lg:w-[240px] lg:shrink-0 lg:translate-x-0 lg:border-0 lg:bg-transparent lg:p-0"
+         :class="drawer && 'translate-x-0'" aria-label="Boshqaruv paneli menyusi">
+    <div class="mb-4 flex items-center justify-between lg:hidden">
+      <span class="font-semibold">Boshqaruv</span>
+      <button type="button" class="btn btn-ghost size-11 px-0" @click="drawer = false" aria-label="Menyuni yopish">{% icon "x" 20 %}</button>
+    </div>
+    <p class="eyebrow px-3">Ish</p>
+    <ul class="mt-2 flex flex-col gap-1">
+      <li><a href="{% url 'web:dashboard' %}" class="sidebar-link" {% if nav == "today" %}aria-current="page"{% endif %}>{% icon "calendar" 18 %}Bugun</a></li>
+      <li><a href="{% url 'web:dashboard_bookings' %}" class="sidebar-link" {% if nav == "bookings" %}aria-current="page"{% endif %}>{% icon "list-checks" 18 %}Bronlar</a></li>
+      {% if user.role == "provider" %}
+        <li><a href="{% url 'web:dashboard_my_schedule' %}" class="sidebar-link" {% if nav == "availability" %}aria-current="page"{% endif %}>{% icon "clock" 18 %}Ish vaqtim</a></li>
+      {% endif %}
+    </ul>
+    {% if user.role == "admin" %}
+      <p class="eyebrow mt-6 px-3">Boshqaruv</p>
+      <ul class="mt-2 flex flex-col gap-1">
+        <li><a href="{% url 'web:dashboard_services' %}" class="sidebar-link" {% if nav == "services" %}aria-current="page"{% endif %}>{% icon "timer" 18 %}Xizmatlar</a></li>
+        <li><a href="{% url 'web:dashboard_providers' %}" class="sidebar-link" {% if nav == "providers" %}aria-current="page"{% endif %}>{% icon "user" 18 %}Xodimlar</a></li>
+        <li><a href="{% url 'web:dashboard_settings' %}" class="sidebar-link" {% if nav == "settings" %}aria-current="page"{% endif %}>{% icon "info" 18 %}Sozlamalar</a></li>
+      </ul>
+    {% endif %}
+  </aside>
+
+  <div class="min-w-0 flex-1">
+    <button type="button" class="btn btn-secondary btn-sm mb-4 lg:hidden" @click="drawer = true" aria-controls="dashboard-nav" :aria-expanded="drawer.toString()">
+      {% icon "list-checks" 16 %}Menyu
+    </button>
+    {% block dashboard %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

@@ -19,7 +19,9 @@ class StyledFormMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
-            if isinstance(field.widget, forms.HiddenInput):
+            if isinstance(
+                field.widget, forms.HiddenInput | forms.CheckboxInput | forms.CheckboxSelectMultiple
+            ):
                 continue
             field.widget.attrs.setdefault("class", "input")
             if field.help_text:
@@ -34,7 +36,7 @@ class StyledFormMixin:
                 attrs["aria-describedby"] = f"id_{name}-error"
 
 
-def _timezone_choices():
+def timezone_choices():
     return [(tz, tz.replace("_", " ")) for tz in sorted(available_timezones()) if "/" in tz]
 
 
@@ -112,7 +114,7 @@ class ProfileForm(StyledFormMixin, forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["timezone"].choices = _timezone_choices()
+        self.fields["timezone"].choices = timezone_choices()
 
 
 class BookingConfirmForm(StyledFormMixin, forms.Form):

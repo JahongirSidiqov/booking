@@ -3,10 +3,12 @@ from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.accounts import services as account_services
 from apps.common.exceptions import DomainError
+from apps.web.access import STAFF_ROLES
 from apps.web.forms import LoginForm, ProfileForm, RegisterForm
 
 
@@ -23,6 +25,12 @@ class LoginView(auth_views.LoginView):
     template_name = "web/login.html"
     authentication_form = LoginForm
     redirect_authenticated_user = True
+
+    def get_default_redirect_url(self):
+        # Staff land on their dashboard; customers on the service list.
+        if self.request.user.role in STAFF_ROLES:
+            return reverse("web:dashboard")
+        return super().get_default_redirect_url()
 
 
 class LogoutView(auth_views.LogoutView):

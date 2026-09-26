@@ -134,6 +134,18 @@
     @apply rounded-md border border-border bg-surface;
   }
 
+  .sidebar-link {
+    @apply flex min-h-11 items-center gap-3 rounded-md border-l-2 border-transparent px-3 font-medium text-muted transition-colors;
+  }
+  .sidebar-link[aria-current="page"] {
+    @apply border-primary bg-primary-soft text-primary;
+  }
+  @media (hover: hover) {
+    .sidebar-link:not([aria-current="page"]):hover {
+      @apply bg-surface text-text;
+    }
+  }
+
   .field {
     @apply flex flex-col gap-1.5;
   }

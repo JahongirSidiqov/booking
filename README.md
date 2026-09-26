@@ -26,6 +26,14 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+Docker'siz: lokal PostgreSQL 14+ ham ishlaydi. Rolga `CREATEDB` huquqi kerak (pytest `test_navbat` bazasini o'zi yaratadi):
+
+```powershell
+& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -p 5433 -c "CREATE ROLE navbat LOGIN PASSWORD 'navbat' CREATEDB;" -c "CREATE DATABASE navbat OWNER navbat;"
+```
+
+Keyin `.env` dagi `DATABASE_URL` portini lokal serverniki bilan almashtiring.
+
 ## Testlar va sifat
 
 Testlar PostgreSQL'da ishlaydi (SQLite `EXCLUDE ... USING gist` ni qo'llamaydi), shuning uchun avval `docker compose up -d db`.

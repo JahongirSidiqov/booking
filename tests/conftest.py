@@ -42,3 +42,17 @@ def auth_client(api_client, customer, password):
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
     api_client.user = customer
     return api_client
+
+
+@pytest.fixture
+def admin_client(api_client, admin_user):
+    api_client.force_authenticate(admin_user)
+    api_client.user = admin_user
+    return api_client
+
+
+@pytest.fixture
+def customer_client(api_client, customer):
+    api_client.force_authenticate(customer)
+    api_client.user = customer
+    return api_client

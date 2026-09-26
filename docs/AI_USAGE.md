@@ -115,6 +115,33 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi bosqichlar bo'yicha qur
 
 ## 4-bosqich — Slot engine
 
+**Prompt (qisqacha):** "davom et" — 4-bosqich (sof slot engine, unit testlar, slots/days endpointlari).
+
+**Generatsiya qilindi:**
+- `apps/scheduling/slot_engine.py` — DB'siz, soatsiz funksiyalar: `get_available_slots`, `get_day_summary`, `subtract`, `merge`, `align_to_step`, `rule_windows`, `local_day_bounds`, `validate_range`. Kirish/chiqish faqat aware UTC; qoidalar har sana uchun alohida UTC'ga aylantiriladi.
+- `scheduling/selectors.py`: `bookable_pair` (404 / `INACTIVE_RESOURCE` / `PROVIDER_NOT_OFFERING_SERVICE` — 5-bosqichda bron yaratish ham shuni ishlatadi), `day_slots`, `days_summary`.
+- API: `GET /availability/slots`, `GET /availability/days`; `tz` tartibi: `?tz=` → foydalanuvchi profili → biznes.
+- `docs/EDGE_CASES.md` — slot tekislash qoidasi (TASK 5.1 talabi); to'liq jadval 12-bosqichda.
+- Testlar: `tests/unit/test_slot_engine.py` (35), `tests/api/test_slots.py` (20).
+
+**Qanday tekshirildi:**
+- `pytest` 219/219; `slot_engine.py` qamrovi 100%, jami 97%.
+- **Mutatsion tekshiruv (qo'lda):** engine'ga ataylab ikki xato kiritildi — (1) davomiylik sig'ishini tekshirmaslik → 9 test yiqildi; (2) "hozir" boshlanadigan slotga ruxsat → 1 test yiqildi (`test_edge_04`). Kod qaytarildi, testlar yashil. Maqsad — qo'lda hisoblangan kutilgan qiymatlar haqiqatan xatoni ushlashini ko'rish.
+- Kutilgan qiymatlar qo'lda hisoblandi: 09:00–18:00, 30 daq, step 15 → 35 slot; Tokyo/Tashkent kesimida 11 slot; Berlin DST'da 09:00 CEST = 07:00Z, 09:00 CET = 08:00Z.
+
+**Qarorlar:**
+- Step setkasi mahalliy yarim tunga bog'langan (UTC'ga emas) — +5:45 zonalarda ham 09:00/09:30.
+- Mijozning bir kuni xodimning ikki sanasiga tushishi mumkin (edge #38) — engine ikkala sananing qoidalarini oladi va natijani mijoz kuniga qirqadi.
+- "Hozir" boshlanadigan slot — o'tmish (`start > now`, edge #4).
+- `max_advance_days` chegarasi inklyuziv (`start ≤ now + N kun`).
+- 31 kunlik chegara inklyuziv (1–31 oktyabr ruxsat, 32 kun → `400 RANGE_TOO_LARGE`).
+- Bronlar hali yo'q: engine `busy_ranges` ni parametr sifatida qabul qiladi va testlarda ishlatiladi; API 5-bosqichda bronlarni uzata boshlaydi.
+
+**AI xatolari:**
+- `_query_window` birinchi yozilishida naive `datetime.astimezone()` ishlatilgan — bu server mashinasining lokal zonasini oladi. ±1 kun zaxira tufayli testda ko'rinmas edi; kodni o'qish paytida AI o'zi topdi va aniq `tzinfo=UTC` ga o'zgartirdi.
+- Birinchi yozilgan `test_bad_query_is_422` chalkash (ichida if-lar) edi — oddiy parametrlangan testga qayta yozildi.
+- `align_to_step` dagi DST "takrorlanuvchi soat" tarmog'i testsiz edi — New York 2026-11-01 01:30 (ikkinchi marta) testi qo'shildi.
+
 ## 5-bosqich — Booking create + concurrency
 
 ## 6-bosqich — State machine

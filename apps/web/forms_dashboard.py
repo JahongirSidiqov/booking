@@ -8,7 +8,13 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.bookings.models import Booking
-from apps.catalog.models import DURATION_MAX, DURATION_MIN, DURATION_STEP, Service
+from apps.catalog.models import (
+    BUFFER_MAX,
+    DURATION_MAX,
+    DURATION_MIN,
+    DURATION_STEP,
+    Service,
+)
 from apps.providers.models import Provider, color_validator
 from apps.scheduling.models import SLOT_STEP_CHOICES
 from apps.web.forms import StyledFormMixin, timezone_choices
@@ -79,8 +85,22 @@ class ServiceForm(StyledFormMixin, forms.Form):
         min_value=Decimal("0"),
         widget=forms.NumberInput(attrs={"step": "1000", "inputmode": "decimal"}),
     )
+    buffer_after_minutes = forms.IntegerField(
+        label="Tanaffus (daqiqa)",
+        min_value=0,
+        max_value=BUFFER_MAX,
+        initial=0,
+        help_text="Har bron keyin xodim band boʻladi (tozalash). Mijozga koʻrinmaydi.",
+        widget=forms.NumberInput(attrs={"step": DURATION_STEP, "inputmode": "numeric"}),
+    )
     sort_order = forms.IntegerField(label="Tartib", min_value=0, initial=0)
     is_active = forms.BooleanField(label="Faol (mijozlarga koʻrinadi)", required=False)
+
+    def clean_buffer_after_minutes(self):
+        value = self.cleaned_data["buffer_after_minutes"]
+        if value % DURATION_STEP:
+            raise forms.ValidationError(f"Tanaffus {DURATION_STEP} ga karrali boʻlsin.")
+        return value
 
     def clean_duration_minutes(self):
         value = self.cleaned_data["duration_minutes"]

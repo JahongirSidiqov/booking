@@ -172,7 +172,13 @@ def get_available_slots(
         windows.extend(rule_windows(rules, day, provider_zone))
         day += timedelta(days=1)
 
-    free = subtract(subtract(windows, time_offs), busy_ranges)
+    # Busy ranges already include each existing booking's own buffer (they end at
+    # blocked_until). The candidate's buffer must not run into the *next* booking either, so
+    # every busy range is started `buffer` earlier: start + duration <= busy_start - buffer.
+    # Working-window ends are not shifted — cleanup after closing time is fine.
+    buffer = timedelta(minutes=getattr(service, "buffer_after_minutes", 0) or 0)
+    busy = [(b_start - buffer, b_end) for b_start, b_end in busy_ranges]
+    free = subtract(subtract(windows, time_offs), busy)
 
     duration = timedelta(minutes=service.duration_minutes)
     step = timedelta(minutes=settings.slot_step_minutes)

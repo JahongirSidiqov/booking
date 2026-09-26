@@ -6,7 +6,16 @@ from apps.common.exceptions import DomainError
 from .models import Service
 
 SERVICE_FIELDS = frozenset(
-    {"name", "slug", "description", "duration_minutes", "price", "is_active", "sort_order"}
+    {
+        "name",
+        "slug",
+        "description",
+        "duration_minutes",
+        "price",
+        "buffer_after_minutes",
+        "is_active",
+        "sort_order",
+    }
 )
 
 

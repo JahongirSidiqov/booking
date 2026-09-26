@@ -89,7 +89,8 @@ def today(request):
             last = max(last, math.ceil(_hour(e, zone)) if e < end else 24)
     for booking in bookings:
         first = min(first, int(_hour(max(booking.start_at, start), zone)))
-        last = max(last, 24 if booking.end_at >= end else math.ceil(_hour(booking.end_at, zone)))
+        until = booking.blocked_until
+        last = max(last, 24 if until >= end else math.ceil(_hour(until, zone)))
 
     span = last - first
 
@@ -105,7 +106,13 @@ def today(request):
                 "provider": provider,
                 "windows": [position(s, e) for s, e in windows_by_provider[provider.pk]],
                 "blocks": [
-                    {"booking": b, **position(b.start_at, b.end_at)}
+                    {
+                        "booking": b,
+                        **position(b.start_at, b.end_at),
+                        "buffer": position(b.end_at, b.blocked_until)
+                        if b.blocked_until > b.end_at
+                        else None,
+                    }
                     for b in bookings
                     if b.provider_id == provider.pk
                 ],

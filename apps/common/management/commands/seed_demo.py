@@ -32,11 +32,12 @@ from apps.scheduling import services as scheduling_services
 from apps.scheduling.models import BusinessSettings
 
 SERVICES = [
-    ("Soch olish", 30, "60000", "Klassik yoki zamonaviy soch turmagi, yuvish bilan."),
-    ("Soqol oʻldirish", 20, "40000", "Ustara bilan, issiq sochiq bilan."),
-    ("Soch va soqol", 45, "90000", "Toʻliq parvarish: soch olish va soqol."),
-    ("Bolalar soch olishi", 30, "45000", "12 yoshgacha bolalar uchun."),
-    ("Yuz parvarishi", 40, "80000", "Tozalash, niqob va massaj."),
+    # name, minutes, price, description, buffer after (cleanup) minutes
+    ("Soch olish", 30, "60000", "Klassik yoki zamonaviy soch turmagi, yuvish bilan.", 0),
+    ("Soqol oʻldirish", 20, "40000", "Ustara bilan, issiq sochiq bilan.", 0),
+    ("Soch va soqol", 45, "90000", "Toʻliq parvarish: soch olish va soqol.", 10),
+    ("Bolalar soch olishi", 30, "45000", "12 yoshgacha bolalar uchun.", 0),
+    ("Yuz parvarishi", 40, "80000", "Tozalash, niqob va massaj.", 15),
 ]
 
 # name, colour, bio, services (indexes), weekly windows {weekday: [(start, end), ...]}
@@ -143,9 +144,10 @@ class Command(BaseCommand):
                 duration_minutes=minutes,
                 price=Decimal(price),
                 description=description,
+                buffer_after_minutes=buffer,
                 sort_order=index,
             )
-            for index, (name, minutes, price, description) in enumerate(SERVICES)
+            for index, (name, minutes, price, description, buffer) in enumerate(SERVICES)
         ]
 
     def _providers(self, services, sardor_user):

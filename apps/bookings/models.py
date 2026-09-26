@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import RangeBoundary, RangeOperators
@@ -41,6 +43,10 @@ class Booking(BaseModel):
     service_name = models.CharField("xizmat nomi", max_length=100)
     duration_minutes = models.PositiveSmallIntegerField("davomiyligi (daqiqa)")
     price = models.DecimalField("narxi", max_digits=12, decimal_places=2)
+    buffer_minutes = models.PositiveSmallIntegerField("tanaffus (daqiqa)", default=0)
+    # The provider is busy until here (end_at + buffer). The provider exclusion constraint uses
+    # this bound; the customer's appointment and their own constraint still end at end_at.
+    blocked_until = models.DateTimeField("xodim band (tanaffus bilan)")
 
     customer_note = models.CharField("mijoz izohi", max_length=500, blank=True)
     internal_note = models.TextField("ichki izoh", blank=True)
@@ -75,11 +81,17 @@ class Booking(BaseModel):
             # create_booking makes races wait and fail politely; this constraint guarantees
             # correctness for every other write path (admin, shell, future bugs).
             # Default range bounds are "[)", so 10:00–10:30 and 10:30–11:00 do not overlap.
+            models.CheckConstraint(
+                condition=Q(blocked_until__gte=F("end_at")), name="booking_blocked_after_end"
+            ),
             ExclusionConstraint(
                 name="no_overlap_per_provider",
                 expressions=[
                     (F("provider"), RangeOperators.EQUAL),
-                    (TsTzRange("start_at", "end_at", RangeBoundary()), RangeOperators.OVERLAPS),
+                    (
+                        TsTzRange("start_at", "blocked_until", RangeBoundary()),
+                        RangeOperators.OVERLAPS,
+                    ),
                 ],
                 condition=Q(status__in=ACTIVE_STATUSES),
             ),
@@ -113,6 +125,8 @@ class Booking(BaseModel):
         return instance
 
     def save(self, *args, **kwargs):
+        if self.blocked_until is None and self.end_at is not None:
+            self.blocked_until = self.end_at + timedelta(minutes=self.buffer_minutes or 0)
         # A status change outside bookings.services would skip guards and history; the
         # service marks its own changes with _status_change_allowed.
         loaded = getattr(self, "_loaded_status", None)

@@ -46,6 +46,7 @@ def _service_initial(service: Service) -> dict:
         "description": service.description,
         "duration_minutes": service.duration_minutes,
         "price": service.price,
+        "buffer_after_minutes": service.buffer_after_minutes,
         "sort_order": service.sort_order,
         "is_active": service.is_active,
     }

@@ -12,10 +12,11 @@ def active_overlapping(**filters) -> QuerySet[Booking]:
 
 
 def busy_ranges(*, provider, start: datetime, end: datetime) -> list[tuple[datetime, datetime]]:
+    """When the provider is occupied: each active booking plus its buffer (to blocked_until)."""
     return list(
-        active_overlapping(provider=provider, start_at__lt=end, end_at__gt=start)
+        active_overlapping(provider=provider, start_at__lt=end, blocked_until__gt=start)
         .order_by("start_at")
-        .values_list("start_at", "end_at")
+        .values_list("start_at", "blocked_until")
     )
 
 

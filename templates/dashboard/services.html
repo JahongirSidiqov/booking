@@ -17,7 +17,7 @@
               <span class="truncate font-semibold">{{ s.name }}</span>
               {% if not s.is_active %}<span class="badge badge-cancelled">Nofaol</span>{% endif %}
             </p>
-            <p class="text-sm text-muted tabular-nums">{{ s.duration_minutes|duration }} · {{ s.price|money:business.currency }} · /{{ s.slug }}</p>
+            <p class="text-sm text-muted tabular-nums">{{ s.duration_minutes|duration }}{% if s.buffer_after_minutes %} + {{ s.buffer_after_minutes }} daq tanaffus{% endif %} · {{ s.price|money:business.currency }} · /{{ s.slug }}</p>
           </div>
           <div class="flex gap-2">
             <a href="?edit={{ s.pk }}" class="btn btn-secondary btn-sm">Tahrirlash</a>
@@ -58,8 +58,9 @@
       </div>
       {% include "components/form_errors.html" %}
       {% include "components/field.html" with field=form.name %}
-      <div class="grid gap-4 sm:grid-cols-2">
+      <div class="grid gap-4 sm:grid-cols-3">
         {% include "components/field.html" with field=form.duration_minutes %}
+        {% include "components/field.html" with field=form.buffer_after_minutes %}
         {% include "components/field.html" with field=form.price %}
       </div>
       {% include "components/field.html" with field=form.description %}

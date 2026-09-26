@@ -2,7 +2,13 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from apps.catalog.models import DURATION_MAX, DURATION_MIN, DURATION_STEP, Service
+from apps.catalog.models import (
+    BUFFER_MAX,
+    DURATION_MAX,
+    DURATION_MIN,
+    DURATION_STEP,
+    Service,
+)
 
 
 class ServiceSerializer(serializers.ModelSerializer):
@@ -15,6 +21,12 @@ class ServiceAdminSerializer(serializers.ModelSerializer):
     slug = serializers.SlugField(max_length=120, required=False, allow_blank=True)
     duration_minutes = serializers.IntegerField(min_value=DURATION_MIN, max_value=DURATION_MAX)
     price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
+    buffer_after_minutes = serializers.IntegerField(
+        min_value=0,
+        max_value=BUFFER_MAX,
+        required=False,
+        help_text="Har bron keyin xodim band boʻladigan vaqt (tozalash). Mijozga koʻrinmaydi.",
+    )
 
     class Meta:
         model = Service
@@ -25,6 +37,7 @@ class ServiceAdminSerializer(serializers.ModelSerializer):
             "description",
             "duration_minutes",
             "price",
+            "buffer_after_minutes",
             "is_active",
             "sort_order",
             "created_at",
@@ -32,6 +45,11 @@ class ServiceAdminSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
         extra_kwargs = {"slug": {"validators": []}}
+
+    def validate_buffer_after_minutes(self, value):
+        if value % DURATION_STEP:
+            raise serializers.ValidationError(f"Tanaffus {DURATION_STEP} ga karrali boʻlsin.")
+        return value
 
     def validate_duration_minutes(self, value):
         if value % DURATION_STEP:

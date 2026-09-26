@@ -168,6 +168,8 @@ def _create_locked(
         service_name=service.name,
         duration_minutes=service.duration_minutes,
         price=service.price,
+        buffer_minutes=service.buffer_after_minutes,
+        blocked_until=end_at + timedelta(minutes=service.buffer_after_minutes),
         customer_note=note,
         idempotency_key=idempotency_key or None,
         idempotency_fingerprint=payload_hash if idempotency_key else "",

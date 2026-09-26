@@ -388,6 +388,25 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi 13 bosqich (0–12) bo'
 - 360px skrinshotda tugma matnni tor ustunga siqib qo'ygan, bosish maydoni ~20px edi — mobilda alohida qatorga va 44px maydonga o'tkazildi.
 - OpenAPI tavsifida ASCII apostrof (`o'chiradi`) — apostrof testi ushladi.
 
+## Bonus 2 — tanaffus (buffer time)
+
+**Prompt (qisqacha):** "davom et" — TASK bonuslari tartibida keyingisi.
+
+**Generatsiya qilindi:**
+- `Service.buffer_after_minutes` (CHECK 0–120, 5 ga karrali), `Booking.buffer_minutes` (snapshot) va `Booking.blocked_until`; xodim exclusion constraint'i endi `[start_at, blocked_until)`, mijozniki `[start_at, end_at)` bo'lib qoldi; `CHECK blocked_until ≥ end_at`.
+- Ikki migratsiya **qo'lda**: `makemigrations` NOT NULL ustun uchun bitta standart qiymat so'radi, eski bronlarga esa `blocked_until = end_at` kerak edi — `RunPython` bilan to'ldirildi, keyin NOT NULL, constraint qayta yaratildi. `makemigrations --check` "No changes"; dev bazadagi 23 ta seed bronida tekshirildi (0 ta mos kelmagan).
+- Slot engine: band oraliqlar `blocked_until` gacha; nomzodning tanaffusi uchun band oraliqlar boshi `buffer` qadar suriladi; ish vaqti oxiri surilmaydi.
+- Admin API serializer, dashboard xizmat formasi, xizmatlar ro'yxati ("+ 10 daq tanaffus"), kun ko'rinishida shtrixli tanaffus, seed'da 2 xizmatga tanaffus, ADR-010.
+- Testlar: `tests/api/test_buffer_time.py` (14).
+
+**Qanday tekshirildi:** `pytest` 608/608; OpenAPI `--fail-on-warn` toza; seed toza bazada qayta ishga tushirildi. Mutatsion tekshiruv: nomzod tanaffusi hisobga olinmasa → `test_candidate_buffer_must_not_run_into_next_booking` yiqiladi.
+
+**Qarorlar:** tanaffus xizmat bo'yicha va faqat "keyin"; mijozga ko'rinmaydi (ommaviy serializer'da yo'q); time off / jadval toraytirish `end_at` bo'yicha.
+
+**AI xatolari:**
+- Bash heredoc yana `'` + `ʻ` aralash matnda buzildi — tahrir skripti fayl sifatida yozilib ishga tushirildi.
+- Apostrof testi inglizcha izohdagi "booking's" ni o'zbekcha xato deb ushladi (testning o'zidagi noto'g'ri musbat) — naqsh so'z oxiridagi `'s` ni chetlab o'tadigan qilindi va naqshning o'ziga test qo'shildi. Shu tahrirda `\b` yana backspace belgisiga aylandi — boshqaruv belgilari testi darhol ushladi.
+
 ## Nimani o'zim yozdim / o'zgartirdim
 
 Rostini aytganda: **ilova kodining deyarli hammasini AI yozdi.** Bu sessiyada kuzatilgan inson hissasi:
@@ -406,9 +425,9 @@ Keyin kodni qo'lda o'zgartirsangiz, shu bo'limga nimani va nega o'zgartirganingi
 | Ko'rsatkich | Qiymat |
 |---|---|
 | Bosqichlar | 13 (0–12), har biri alohida tasdiqlangan |
-| Testlar | 593 (unit, API, web, concurrency, email, e2e) — hammasi yashil |
+| Testlar | 608 (unit, API, web, concurrency, email, e2e) — hammasi yashil |
 | Qamrov | ~98% |
 | TASK 8-bo'limdagi holatlar | 38/38, har biri nomli test bilan |
-| ADR | 9 (001–009) |
+| ADR | 10 (001–010) |
 | Faqat brauzer/skrinshot topgan xatolar | 8 ta (fieldset kengligi, sana chizig'i, skeleton bo'shlig'i, CSS'dagi vergulli foizlar, dialog o'zi yopilishi, navbar 2px, tashqi shrift timeout'i, tahrirlashdagi ASCII belgilari) |
 | Tekshirilmagan | Docker image build va `docker compose` (mashinada Docker yo'q) — CI'dagi `compose-smoke` job'i birinchi push'da tekshiradi; haqiqiy SMTP va deploy |

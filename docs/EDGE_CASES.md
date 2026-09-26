@@ -118,6 +118,16 @@ Setka UTC'ga emas, mahalliy yarim tunga bog'langan: UTC+5:45 (Kathmandu) zonasid
 
 Testlar: `test_edge_34_duration_45_step_15_next_slot_after_booking`, `test_duration_40_rounds_up_to_next_step_after_booking`, `test_busy_range_half_open_boundaries`, `test_alignment_uses_local_grid_in_quarter_hour_offset_zone` (`tests/unit/test_slot_engine.py`).
 
+## Tanaffus (buffer time, bonus)
+
+| Holat | Natija | Test |
+|---|---|---|
+| 09:00–09:30 bron, xizmat tanaffusi 10 daq | Xodim 09:40 gacha band; keyingi slot 09:45 (step 15) yoki 09:40 (step 5); 09:30 ga so'rov `409 SLOT_TAKEN` | `test_existing_booking_buffer_pushes_next_slot`, `test_next_booking_respects_buffer` |
+| Nomzodning tanaffusi keyingi bronga kiradi (10:00 band, 30 + 15) | 09:30 ko'rsatilmaydi, 09:15 ko'rsatiladi | `test_candidate_buffer_must_not_run_into_next_booking` |
+| Kunning oxirgi sloti (18:00 yopiladi, 30 + 15) | 17:30 ko'rsatiladi — tozalash yopilgandan keyin | `test_buffer_may_run_past_closing_time` |
+| Mijoz tanaffus paytida boshqa xodimga yoziladi | Ruxsat — mijoz constraint'i `end_at` bo'yicha | `test_customer_is_not_blocked_by_buffer` |
+| Xizmat tanaffusi keyin o'zgartirildi | Eski bronning `blocked_until` i o'zgarmaydi (snapshot) | `test_booking_snapshots_buffer_and_customer_sees_plain_times` |
+
 ## Ko'lamdan tashqari (ongli ravishda)
 
 - Yarim tundan o'tuvchi smena — ADR-004.

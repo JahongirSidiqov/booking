@@ -86,7 +86,7 @@ BusinessSettings (pk = 1)
 | `scheduling_availabilityrule` | `CHECK start_time < end_time` (yarim tundan o'tmaydi — ADR-004), `CHECK weekday 0..6` |
 | `scheduling_timeoff` | `CHECK start_at < end_at`, index `(provider, start_at)` |
 | `scheduling_businesssettings` | `CHECK id = 1`, step ∈ {5,10,15,20,30,60}, chegaralar |
-| `bookings_booking` | `EXCLUDE USING gist (provider WITH =, tstzrange(start_at, end_at, '[)') WITH &&) WHERE status IN ('pending','confirmed')`; xuddi shunday `customer` bo'yicha; `UNIQUE (customer, idempotency_key) WHERE key IS NOT NULL`; `CHECK start_at < end_at`; FK'lar `PROTECT`; indekslar `(provider, start_at)`, `(customer, -start_at)`, `(status, start_at)` |
+| `bookings_booking` | `EXCLUDE USING gist (provider WITH =, tstzrange(start_at, blocked_until, '[)') WITH &&) WHERE status IN ('pending','confirmed')`; `customer` bo'yicha — `tstzrange(start_at, end_at)` (tanaffus mijozni band qilmaydi); `CHECK blocked_until ≥ end_at`; `UNIQUE (customer, idempotency_key) WHERE key IS NOT NULL`; `CHECK start_at < end_at`; FK'lar `PROTECT`; indekslar `(provider, start_at)`, `(customer, -start_at)`, `(status, start_at)` |
 | `bookings_bookingstatushistory` | update/delete model va queryset darajasida taqiqlangan |
 
 - **UUID pk** — ID'larni sanab chiqib bo'lmaydi; begona bron baribir `404` (ADR-008).
@@ -100,7 +100,7 @@ BusinessSettings (pk = 1)
 
 1. Mijozning `date_local` kuni (`tz` zonasida) → UTC oraliq `[day_start, day_end)`.
 2. Shu oraliqqa tegadigan **har bir xodim sanasi** uchun qoidalar xodim zonasida o'sha sananing UTC oynalariga aylantiriladi (DST uchun to'g'ri; mijoz kuni xodimning ikki sanasiga tushishi mumkin — edge #38).
-3. Oynalardan time off, keyin band bronlar ayiriladi (`subtract`, yarim ochiq oraliqlar, birlashtirish bilan).
+3. Oynalardan time off, keyin band bronlar ayiriladi (`subtract`, yarim ochiq oraliqlar, birlashtirish bilan). Band oraliq bronning `blocked_until` igacha (tanaffus bilan) va nomzodning o'z tanaffusi uchun `buffer` qadar oldinroq boshlanadi (ADR-010).
 4. Har oynada boshlanish **xodimning mahalliy yarim tunidan step setkasiga** tekislanadi (`align_to_step`), `start + duration ≤ oyna oxiri` bo'lguncha `step` bilan yuriladi.
 5. Filtr: mijoz kuni ichida, `start > now`, `start ≥ now + lead`, `start ≤ now + max_advance`.
 

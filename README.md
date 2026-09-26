@@ -30,6 +30,7 @@ Parol: `DEMO_PASSWORD` yoki `seed_demo --password …`. Qayta yaratish: `python 
 - **Bron oqimi:** xodim → sana chizig'i (har kunda bo'sh slotlar soni) → vaqt chiplari (Ertalab / Kunduzi / Kechqurun, HTMX) → tasdiq → natija. Band bo'lib qolgan vaqt — do'stona xabar va yangilangan slotlar; ikki marta bosish — bitta bron.
 - **To'g'rilik:** provider qatoriga lock + PostgreSQL `EXCLUDE` constraint (10 parallel so'rov → 1 g'olib), idempotency kaliti, holatlar mashinasi (`pending → confirmed → completed`, `cancelled`), bekor qilish muddati, o'zgarmas status tarixi.
 - **Vaqt:** DB'da UTC, ish vaqti xodimning mahalliy vaqtida (DST'da ham to'g'ri), mijoz o'z zonasida ko'radi, API'da offset majburiy; qurilma zonasi boshqacha bo'lsa bir bosishda o'tish (anonim foydalanuvchida ham).
+- **Tanaffus (buffer):** xizmatdan keyin xodim uchun tozalash vaqti — keyingi mijoz yozilmaydi, mijozning o'z vaqti o'zgarmaydi.
 - **Kalendar:** har bron `.ics` fayl sifatida (Google/Apple/Outlook); bekor qilinsa `STATUS:CANCELLED`.
 - **Boshqaruv paneli:** xodimlar ustunlari bilan kun ko'rinishi va KPI, bronlar jadvali (filtr, qidiruv, sahifalash), tasdiqlash / bajarildi / sababli bekor qilish, xizmatlar, xodimlar, haftalik ish vaqti va dam olish, sozlamalar. Jadval o'zgarishi faol bron bilan to'qnashsa — ro'yxat bilan rad etiladi.
 - **API:** REST (JWT, refresh rotation + token oilasi), yagona xato formati (RFC 9457), filtrlar, sahifalash, throttle, Swagger.
@@ -140,7 +141,7 @@ docker/        Dockerfile, entrypoint.sh, Caddyfile
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — qatlamlar, bron oqimi, DB, slot engine, state machine, vaqt zonalari, trade-off'lar
 - [docs/EDGE_CASES.md](docs/EDGE_CASES.md) — 38 ta holat, natija va testlari
-- [docs/decisions/](docs/decisions/) — ADR-001…009
+- [docs/decisions/](docs/decisions/) — ADR-001…010
 - [docs/DEPLOY.md](docs/DEPLOY.md) — Render, Railway, VPS
 - [docs/INTERVIEW_NOTES.md](docs/INTERVIEW_NOTES.md) — asosiy qarorlar qisqacha
 - [docs/AI_USAGE.md](docs/AI_USAGE.md) — AI yordamida qilingan ishlar jurnali

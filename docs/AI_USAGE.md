@@ -1,6 +1,6 @@
 # AI foydalanish jurnali
 
-Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi bosqichlar bo'yicha qurilmoqda. Har bosqich uchun: prompt qisqacha → nima generatsiya bo'ldi → qanday tekshirildi → nima o'zgartirildi → AI xatolari.
+Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi 13 bosqich (0–12) bo'yicha qurildi. Har bosqich uchun: prompt qisqacha → nima generatsiya bo'ldi → qanday tekshirildi → nima o'zgartirildi → AI xatolari.
 
 ## Umumiy yondashuv
 
@@ -350,4 +350,43 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi bosqichlar bo'yicha qur
 
 ## 12-bosqich — Hujjat va yakun
 
+**Prompt (qisqacha):** "davom et" — 12-bosqich (ARCHITECTURE, EDGE_CASES, AI_USAGE, INTERVIEW_NOTES, README skrinshotlar va demo loginlar bilan, yakuniy tekshiruv).
+
+**Generatsiya qilindi:**
+- `docs/ARCHITECTURE.md` — qatlamlar, bron oqimi, DB sxemasi va constraint'lar, slot engine, state machine, vaqt zonalari, auth, xato formati, email, texnologiya tanlovi, trade-off'lar, o'sish rejasi.
+- `docs/EDGE_CASES.md` — 38 ta holat: natija, yechim, test nomi (har bir nom grep bilan mavjudligi tekshirildi); curl namunalari; slot tekislash qoidasi.
+- `docs/INTERVIEW_NOTES.md`, README (skrinshotlar, demo loginlar, ishga tushirish, sozlamalar, testlar, CI, hujjatlar), `LICENSE` (MIT).
+- `docs/screenshots/` — `seed_demo` qilingan dev bazadan Playwright bilan 7 ta skrinshot (390px telefon, 1440px desktop).
+- `tests/test_architecture.py::test_no_stray_control_characters_in_sources`.
+
+**Qanday tekshirildi:** hujjatdagi har test nomi repoda borligi skript bilan; skrinshotlar ko'rib chiqildi (bo'sh kun ko'rinishi almashtirildi); yakuniy `ruff`, `pytest` (e2e bilan), `check --deploy`, 15-bo'lim checklist — natijalar hisobotda.
+
+**AI xatolari:**
+- **Hujjatdagi tekshiruv buyrug'i hech narsa tekshirmas edi:** EDGE_CASES'ga yozilgan PowerShell bir qatorligi `Select-String -Quiet` ga tayangan; Windows PowerShell 5.1 da u har fayl uchun alohida True/False massiv qaytaradi va `-not` hech qachon ishlamaydi. Birinchi natija ("38 ta hammasi bor") shuning uchun ma'nosiz edi — mavjud bo'lmagan `test_edge_99` bilan salbiy nazorat o'tkazilganda ko'rindi. Hisoblash `-List` + `.Count` ga o'zgartirildi, ijobiy va salbiy nazorat bilan qayta tekshirildi.
+- **8-bosqichdan qolgan buzuq qator:** README va CLAUDE.md da `.\scripts\build-css.ps1` o'rnida `.\scripts<backspace>uild-css.ps1` turgan edi — Python qatoridagi `\b` backspace belgisiga aylangan. README'ni o'qishda topildi; bunday belgilarni butun repoda qidiradigan test qo'shildi (u darhol ikkala qatorni ushladi).
+- Skrinshot skriptida yashirin (`sr-only`) radio'ni to'g'ridan-to'g'ri bosishga urinish — foydalanuvchi kabi card (label) bosiladigan qilindi.
+
 ## Nimani o'zim yozdim / o'zgartirdim
+
+Rostini aytganda: **ilova kodining deyarli hammasini AI yozdi.** Bu sessiyada kuzatilgan inson hissasi:
+
+- **Texnik topshiriq** — `TASK.md` (bosqichlar, talablar, edge case'lar, dizayn tokenlari, qabul mezonlari) va ish qoidalari (bosqichma-bosqich, test o'tmasa to'xtash, placeholder yo'q).
+- **Har bosqich natijasini ko'rib, keyingisiga ruxsat berish** ("davom et") — 0–12 bosqichlar.
+- **Muhit qarorlari:** Docker Desktop o'rniga lokal PostgreSQL 18 ishlatish; `postgres` parolini tiklash va `navbat` rolini yaratish (AI bergan skriptni administrator PowerShell'da o'zi ishga tushirdi).
+- Loyiha nomi, demo biznes, rollar, stack va ko'lam (multi-tenant, to'lov, SMS yo'q) — TASK.md dan.
+
+AI ning o'zi qabul qilgan va ADR/jurnalda yozilgan qarorlar (tasdiqlash uchun ko'rib chiqish kerak): refresh token oilasi, xato handler'ini 7-bosqichdan oldinga surish, `BookingStatusHistory` ni 5-bosqichda qo'shish, xodim `pending` bronni bekor qilganda ham sabab majburiyligi, qayta tasdiqlashda no-op emas 409, seed uchun soatni `mock` bilan orqaga surish, MIT litsenziya.
+
+Keyin kodni qo'lda o'zgartirsangiz, shu bo'limga nimani va nega o'zgartirganingizni qo'shing — baholashda aynan shu farq ko'rinishi kerak.
+
+## Umumiy natija
+
+| Ko'rsatkich | Qiymat |
+|---|---|
+| Bosqichlar | 13 (0–12), har biri alohida tasdiqlangan |
+| Testlar | ~570 (unit, API, web, concurrency, email, e2e) — hammasi yashil |
+| Qamrov | ~98% |
+| TASK 8-bo'limdagi holatlar | 38/38, har biri nomli test bilan |
+| ADR | 9 (001–009) |
+| Faqat brauzer/skrinshot topgan xatolar | 8 ta (fieldset kengligi, sana chizig'i, skeleton bo'shlig'i, CSS'dagi vergulli foizlar, dialog o'zi yopilishi, navbar 2px, tashqi shrift timeout'i, tahrirlashdagi ASCII belgilari) |
+| Tekshirilmagan | Docker image build va `docker compose` (mashinada Docker yo'q) — CI'dagi `compose-smoke` job'i birinchi push'da tekshiradi; haqiqiy SMTP va deploy |

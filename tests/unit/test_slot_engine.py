@@ -15,6 +15,7 @@ from apps.scheduling.slot_engine import (
     merge,
     slot_rejection,
     subtract,
+    uncovered,
 )
 
 THU = date(2026, 10, 1)  # Thursday, weekday 3
@@ -372,3 +373,17 @@ def test_slot_rejection_agrees_with_listing_for_every_candidate():
     grid = [tashkent(8) + timedelta(minutes=15 * i) for i in range(48)]
     bookable = {t for t in grid if reject(t, busy=busy) is None}
     assert bookable == listed
+
+
+# --- uncovered (schedule narrowing) ---------------------------------------------------------
+
+
+def test_uncovered_reports_intervals_outside_new_rules():
+    inside = (tashkent(9), tashkent(9, 30))
+    outside = (tashkent(8, 30), tashkent(9, 15))
+    assert uncovered([inside, outside], WORKDAY, "Asia/Tashkent") == [outside]
+
+
+def test_uncovered_merges_touching_windows():
+    split = [Rule(3, time(9), time(9, 15)), Rule(3, time(9, 15), time(18))]
+    assert uncovered([(tashkent(9), tashkent(9, 30))], split, "Asia/Tashkent") == []

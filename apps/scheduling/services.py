@@ -2,10 +2,13 @@ from datetime import datetime, time
 from itertools import pairwise
 
 from django.db import transaction
+from django.utils import timezone
 
+from apps.bookings import selectors as booking_selectors
 from apps.common.exceptions import DomainError
 from apps.providers.models import Provider
 
+from . import slot_engine
 from .models import AvailabilityRule, BusinessSettings, TimeOff
 
 SETTINGS_FIELDS = frozenset(
@@ -45,8 +48,33 @@ def _overlaps(rules: list[dict]) -> list[str]:
     return problems
 
 
+def _conflicts_error(bookings) -> DomainError:
+    # No automatic cancellation (ADR-005): the admin has to contact these customers first.
+    return DomainError(
+        "CONFLICTS_WITH_BOOKINGS",
+        f"Bu oʻzgarish {len(bookings)} ta faol bron bilan toʻqnashadi. "
+        "Avval ularni bekor qiling yoki boshqa vaqtga koʻchiring.",
+        409,
+        title="Faol bronlar bilan toʻqnashuv",
+        extra={
+            "bookings": [
+                {
+                    "id": str(b.pk),
+                    "start_at": b.start_at.isoformat().replace("+00:00", "Z"),
+                    "end_at": b.end_at.isoformat().replace("+00:00", "Z"),
+                    "status": b.status,
+                    "service_name": b.service_name,
+                }
+                for b in bookings
+            ]
+        },
+    )
+
+
 @transaction.atomic
-def replace_availability(*, provider: Provider, rules: list[dict]) -> list[AvailabilityRule]:
+def replace_availability(
+    *, provider: Provider, rules: list[dict], now: datetime | None = None
+) -> list[AvailabilityRule]:
     """Replace the provider's whole weekly schedule with `rules` (one PUT = one week)."""
     problems = _overlaps(rules)
     if problems:
@@ -54,6 +82,22 @@ def replace_availability(*, provider: Provider, rules: list[dict]) -> list[Avail
             "VALIDATION_ERROR", "Ish vaqti oraliqlari kesishmasin.", errors={"rules": problems}
         )
     provider = _lock_provider(provider)
+
+    upcoming = list(
+        booking_selectors.active_overlapping(
+            provider=provider, end_at__gt=now or timezone.now()
+        ).order_by("start_at")
+    )
+    if upcoming:
+        tz = provider.timezone or BusinessSettings.load().timezone
+        new_rules = [slot_engine.Rule(r["weekday"], r["start_time"], r["end_time"]) for r in rules]
+        left_out = set(
+            slot_engine.uncovered([(b.start_at, b.end_at) for b in upcoming], new_rules, tz)
+        )
+        conflicts = [b for b in upcoming if (b.start_at, b.end_at) in left_out]
+        if conflicts:
+            raise _conflicts_error(conflicts)
+
     AvailabilityRule.objects.filter(provider=provider).delete()
     return AvailabilityRule.objects.bulk_create(
         [
@@ -79,6 +123,13 @@ def add_time_off(
             errors={"end_at": ["Tugash vaqti boshlanishdan keyin boʻlsin."]},
         )
     provider = _lock_provider(provider)
+    conflicts = list(
+        booking_selectors.active_overlapping(
+            provider=provider, start_at__lt=end_at, end_at__gt=start_at
+        ).order_by("start_at")
+    )
+    if conflicts:
+        raise _conflicts_error(conflicts)
     return TimeOff.objects.create(
         provider=provider, start_at=start_at, end_at=end_at, reason=reason
     )

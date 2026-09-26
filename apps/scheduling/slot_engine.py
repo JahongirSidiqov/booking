@@ -236,6 +236,29 @@ def slot_rejection(
     return None
 
 
+def uncovered(
+    intervals: Iterable[Interval], rules: Iterable[RuleLike], tz: str | ZoneInfo
+) -> list[Interval]:
+    """Intervals that do not fit entirely inside the working windows defined by `rules`.
+
+    Used before narrowing a schedule: a booking left outside the new hours is a conflict.
+    """
+    zone = as_zone(tz)
+    rules = list(rules)
+    result = []
+    for start, end in intervals:
+        first = start.astimezone(zone).date()
+        last = (end - timedelta(microseconds=1)).astimezone(zone).date()
+        windows: list[Interval] = []
+        day = first
+        while day <= last:
+            windows.extend(rule_windows(rules, day, zone))
+            day += timedelta(days=1)
+        if not any(w_start <= start and end <= w_end for w_start, w_end in merge(windows)):
+            result.append((start, end))
+    return result
+
+
 def validate_range(date_from: date, date_to: date) -> None:
     if date_to < date_from:
         raise DomainError(

@@ -17,6 +17,7 @@ media/
 .env
 .env.*
 !.env.example
+!.env.prod.example
 
 # Frontend build
 node_modules/

@@ -12,10 +12,10 @@ FROM debian:bookworm-slim AS css
 ARG TAILWIND_VERSION=v4.3.3
 ADD --chmod=755 https://github.com/tailwindlabs/tailwindcss/releases/download/${TAILWIND_VERSION}/tailwindcss-linux-x64 /usr/local/bin/tailwindcss
 WORKDIR /src
-COPY static/src/ static/src/
+COPY assets/css/ assets/css/
 COPY templates/ templates/
 COPY apps/ apps/
-RUN tailwindcss -i static/src/app.css -o /out/app.css --minify
+RUN tailwindcss -i assets/css/app.css -o /out/app.css --minify
 
 FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -31,5 +31,8 @@ COPY --from=css --chown=app:app /out/app.css /app/static/css/app.css
 RUN chmod +x /app/docker/entrypoint.sh && mkdir -p /app/staticfiles && chown app:app /app/staticfiles
 USER app
 EXPOSE 8000
+# Compose health check for the web process (the scheduler disables it). Hosting platforms
+# use their own check against /healthz and may change PORT; inside compose it is 8000.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=4)"]
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
 CMD ["gunicorn"]

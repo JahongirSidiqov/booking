@@ -1,0 +1,5 @@
+# Automatic HTTPS (Let's Encrypt) for DOMAIN, proxied to gunicorn.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:8000
+}

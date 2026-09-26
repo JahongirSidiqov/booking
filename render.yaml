@@ -1,0 +1,45 @@
+# Render Blueprint: New → Blueprint → pick this repo. Creates Postgres 16, the web service
+# and the expiry worker. See docs/DEPLOY.md.
+databases:
+  - name: navbat-db
+    plan: free
+    postgresMajorVersion: "16"
+    databaseName: navbat
+    user: navbat
+
+services:
+  - type: web
+    name: navbat
+    runtime: docker
+    dockerfilePath: ./docker/Dockerfile
+    plan: free
+    healthCheckPath: /healthz
+    envVars: &env
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.prod
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: navbat-db
+          property: connectionString
+      - key: DEFAULT_TZ
+        value: Asia/Tashkent
+      - key: NUM_PROXIES
+        value: "1"
+      - key: GUNICORN_WORKERS
+        value: "2"
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.console.EmailBackend
+      - key: DEMO_PASSWORD
+        sync: false
+
+  # Paid plans only on Render. Without it, run `python manage.py expire_stale_bookings`
+  # from a Render cron job or any external scheduler every few minutes.
+  - type: worker
+    name: navbat-scheduler
+    runtime: docker
+    dockerfilePath: ./docker/Dockerfile
+    dockerCommand: /app/docker/entrypoint.sh scheduler
+    plan: starter
+    envVars: *env

@@ -63,6 +63,30 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi bosqichlar bo'yicha qur
 
 ## 2-bosqich — Catalog + providers
 
+**Prompt (qisqacha):** "davom et" — 2-bosqich (Service, Provider, ProviderService, CRUD + ruxsatlar, soft delete).
+
+**Generatsiya qilindi:**
+- `catalog.Service` — DB CHECK'lar: davomiylik 5–480 va 5 ga karrali (`Mod` ifodasi bilan), narx ≥ 0; unique slug. `services.py` (avtomatik unique slug, update, deactivate), `selectors.py`.
+- `providers.Provider` + `ProviderService` — rang CHECK (`#RRGGBB`), unique(provider, service), `user` faqat `provider` rolidagi va boshqa xodimga bog'lanmagan foydalanuvchi. `set_provider_services` — ro'yxatni butunlay almashtiradi (tranzaksiyada).
+- API: `/services`, `/providers` (ViewSet, PUT yo'q), `PUT /providers/{id}/services`, `?service=` filtr, `?include_inactive=1` (faqat admin). Ommaviy va admin serializer'lari alohida (ommaga `is_active`, `user_id` ko'rinmaydi).
+- `apps/api/permissions.py` (`IsAdmin`, `IsAdminOrReadOnly`), `apps/api/utils.py` (noto'g'ri UUID → 404 / 422).
+- Django admin: xizmat va xodimni o'chirish tugmasi o'chirilgan.
+- Testlar: `test_services.py` (30), `test_providers.py` (26), `test_catalog_constraints.py` (9 — DB CHECK'lar ORM'siz ham ishlashi).
+
+**Qanday tekshirildi:** `pytest` 112/112, qamrov 95%; `ruff`, `makemigrations --check` toza; dev bazaga migrate.
+
+**Qarorlar:**
+- DELETE = `is_active=False` (xizmat ham, xodim ham) — bronlar tarixi uchun. Qayta faollashtirish `PATCH {"is_active": true}`.
+- Noto'g'ri UUID URL'da → 404 (500 emas), query parametrda → 422.
+- Nofaol xizmat/xodim ommaga 404, admin'ga ko'rinadi (edge #10).
+- Nom o'zgarganda slug o'zgarmaydi (UI havolalari buzilmasin); bo'sh slug yuborilsa nomdan qayta yasaladi.
+- Provider.timezone `NULL` = biznes timezone'i (TASK 4.2); ruff DJ001 shu joyda `noqa` bilan izohlangan.
+- TASK 5.5 dagi "N ta kelajak broni bor" ogohlantirishi bronlar paydo bo'lgach (5-bosqich) va UI'da (9-bosqich) qo'shiladi; hozir DELETE `204`.
+
+**AI xatolari:**
+- Ishlatilmagan `IsProvider` ruxsat klassi "keyinroq kerak bo'ladi" deb yozilgan edi — qamrov hisobotida ko'rinib qoldi, olib tashlandi (3-bosqichda haqiqiy ishlatilganda qo'shiladi).
+- `update_service` dagi slug tarmoqlari testsiz qolgan edi (qamrov 83%) — 2 ta test qo'shildi.
+
 ## 3-bosqich — Scheduling
 
 ## 4-bosqich — Slot engine

@@ -59,8 +59,11 @@ def booking_payload(booking: Booking, *, tz: str, business) -> dict:
         "duration_minutes": booking.duration_minutes,
         "price": f"{booking.price:.2f}",
         "currency": business.currency,
+        "customer": {"id": str(booking.customer_id), "full_name": booking.customer.full_name},
         "customer_note": booking.customer_note,
         "can_cancel_until": utc_z(booking.start_at - deadline),
+        "cancelled_at": utc_z(booking.cancelled_at),
+        "cancel_reason": booking.cancel_reason,
         "created_at": utc_z(booking.created_at),
         "history": [history_entry(h) for h in booking.history.all()],
     }

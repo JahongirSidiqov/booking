@@ -82,7 +82,7 @@ def login(page, base, user, landing="/"):
     page.goto(f"{base}/login/")
     page.fill("#id_username", user.email)
     page.fill("#id_password", DEFAULT_PASSWORD)
-    page.click("button[type=submit]")
+    page.click("main button[type=submit]")
     page.wait_for_url(f"{base}{landing}")
 
 
@@ -221,3 +221,21 @@ def test_mobile_drawer_and_modal_are_keyboard_operable(browser, live_server, adm
     page.keyboard.press("Escape")
     assert dialog.evaluate("d => !d.open")
     page.close()
+
+
+def test_device_timezone_banner_switches_display(browser, live_server, scenario):
+    """A visitor whose device is in Dubai sees the banner and one click switches the page."""
+    context = browser.new_context(viewport={"width": 360, "height": 800}, timezone_id="Asia/Dubai")
+    page = context.new_page()
+    page.goto(f"{live_server.url}/")
+    banner_button = page.get_by_role("button", name="Qurilma zonasiga oʻtish")
+    assert banner_button.is_visible()
+    assert "Vaqt zonasi: Asia/Tashkent" in page.content()
+    assert_no_horizontal_scroll(page, "banner@mobile")
+    shot(page, "mobile-timezone-banner")
+
+    banner_button.click()
+    page.wait_for_load_state("networkidle")
+    assert "Vaqt zonasi: Asia/Dubai" in page.content()
+    assert not page.get_by_role("button", name="Qurilma zonasiga oʻtish").is_visible()
+    context.close()

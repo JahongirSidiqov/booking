@@ -155,7 +155,9 @@ def test_put_is_not_allowed(admin_client):
 
 def test_delete_deactivates_instead_of_deleting(admin_client):
     service = ServiceFactory()
-    assert admin_client.delete(detail(service)).status_code == 204
+    response = admin_client.delete(detail(service))
+    assert response.status_code == 200
+    assert response.json()["upcoming_bookings_count"] == 0
     service.refresh_from_db()
     assert service.is_active is False
     assert str(service.pk) not in {s["id"] for s in APIClient().get(URL).json()}

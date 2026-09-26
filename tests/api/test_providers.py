@@ -225,6 +225,13 @@ def test_put_services_duplicate_ids_are_collapsed(admin_client):
 
 def test_delete_deactivates_provider(admin_client):
     provider = ProviderFactory()
-    assert admin_client.delete(detail(provider)).status_code == 204
+    response = admin_client.delete(detail(provider))
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": str(provider.pk),
+        "is_active": False,
+        "upcoming_bookings_count": 0,
+        "upcoming_bookings": [],
+    }
     provider.refresh_from_db()
     assert provider.is_active is False

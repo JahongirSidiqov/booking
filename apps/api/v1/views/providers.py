@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from apps.api.permissions import IsAdmin, IsAdminOrReadOnly, IsProviderOwnerOrAdmin, is_admin
 from apps.api.utils import flag_query_param, uuid_or_404, uuid_query_param
+from apps.api.v1.serializers.bookings import deactivation_payload
 from apps.api.v1.serializers.providers import (
     ProviderAdminSerializer,
     ProviderSerializer,
@@ -16,6 +17,7 @@ from apps.api.v1.serializers.scheduling import (
     RuleSerializer,
     TimeOffSerializer,
 )
+from apps.bookings import selectors as booking_selectors
 from apps.providers import selectors, services
 from apps.scheduling import selectors as scheduling_selectors
 from apps.scheduling import services as scheduling_services
@@ -68,8 +70,9 @@ class ProviderViewSet(viewsets.ViewSet):
         return Response(ProviderAdminSerializer(provider).data)
 
     def destroy(self, request, pk=None):
-        services.deactivate_provider(provider=self._get(pk, include_inactive=True))
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        provider = services.deactivate_provider(provider=self._get(pk, include_inactive=True))
+        upcoming = list(booking_selectors.upcoming_active(now=timezone.now(), provider=provider))
+        return Response(deactivation_payload(provider, upcoming))
 
     @action(detail=True, methods=["put"], url_path="services", permission_classes=[IsAdmin])
     def replace_services(self, request, pk=None):

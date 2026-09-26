@@ -1,13 +1,14 @@
 from django.urls import path
 from rest_framework.routers import SimpleRouter
 
-from apps.api.v1.views import accounts, availability, catalog, providers, scheduling
+from apps.api.v1.views import accounts, availability, bookings, catalog, providers, scheduling
 
 app_name = "v1"
 
 router = SimpleRouter(trailing_slash=False)
 router.register("services", catalog.ServiceViewSet, basename="service")
 router.register("providers", providers.ProviderViewSet, basename="provider")
+router.register("bookings", bookings.BookingViewSet, basename="booking")
 
 urlpatterns = [
     path("auth/register", accounts.RegisterView.as_view(), name="auth-register"),

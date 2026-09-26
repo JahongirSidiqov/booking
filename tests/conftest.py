@@ -1,4 +1,9 @@
+# rest_framework.throttling is imported eagerly on purpose: SimpleRateThrottle stores
+# `timer = time.time` at class creation. If the module is first imported inside a freezegun
+# block, it captures freezegun's fake function, which then gets bound as a method and breaks
+# every throttled request.
 import pytest
+import rest_framework.throttling  # noqa: F401
 from django.core.cache import cache
 from rest_framework.test import APIClient
 

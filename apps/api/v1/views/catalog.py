@@ -1,10 +1,13 @@
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
 from apps.api.permissions import IsAdminOrReadOnly, is_admin
 from apps.api.utils import flag_query_param, uuid_or_404
+from apps.api.v1.serializers.bookings import deactivation_payload
 from apps.api.v1.serializers.catalog import ServiceAdminSerializer, ServiceSerializer
+from apps.bookings import selectors as booking_selectors
 from apps.catalog import selectors, services
 
 
@@ -46,5 +49,6 @@ class ServiceViewSet(viewsets.ViewSet):
         return Response(ServiceAdminSerializer(service).data)
 
     def destroy(self, request, pk=None):
-        services.deactivate_service(service=self._get(pk, include_inactive=True))
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        service = services.deactivate_service(service=self._get(pk, include_inactive=True))
+        upcoming = list(booking_selectors.upcoming_active(now=timezone.now(), service=service))
+        return Response(deactivation_payload(service, upcoming))

@@ -297,6 +297,28 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi bosqichlar bo'yicha qur
 
 ## 10-bosqich — Notifications
 
+**Prompt (qisqacha):** "davom et" — 10-bosqich (create/confirm/cancel email'lari `on_commit` orqali, email xatosi bronni qaytarmasligi).
+
+**Generatsiya qilindi:**
+- `apps/notifications/senders.py`: `booking_created`, `booking_status_changed`; `_never_raise` (istisno → `logger.exception`), bron commit'dan keyin qayta o'qiladi, vaqt mijoz/xodim zonasida, havolalar `SITE_URL` bilan.
+- `bookings/services.py`: `transaction.on_commit(partial(...))` — yaratishda va har o'tishda.
+- Shablonlar `templates/emails/`: 5 ta xat × (txt + html). HTML — inline stil (email klientlari CSS o'zgaruvchilarini bilmaydi), txt — `autoescape off`.
+- `SITE_URL` sozlamasi (`.env.example`), ADR-006.
+- Testlar: `tests/notifications/test_emails.py` (15).
+
+**Qanday tekshirildi:**
+- `pytest` notifications 15/15.
+- Mutatsion tekshiruv: (1) `_never_raise` ishlamasa → `test_edge_29` yiqildi; (2) xat `on_commit` siz, tranzaksiya ichida yuborilsa → `test_no_email_before_commit` yiqildi. Kuzatuv: `test_edge_37` bu mutatsiyada ham o'tdi — u yerda xato yuborish nuqtasidan oldin sodir bo'ladi; shuning uchun "commit'dan oldin yubormaslik" kafolatini `test_no_email_before_commit` tekshiradi.
+
+**Qarorlar:**
+- Kimga: mijozga — qabul qilindi / tasdiqlandi / bekor qilindi (xodim bekor qilsa sabab bilan, mijoz o'zi bekor qilsa tasdiq); xodimga (akkaunti bo'lsa) — yangi bron va mijoz bekor qilgani. "Bajarildi" — xat yo'q.
+- `auto_confirm` → bitta "tasdiqlandi" xati; idempotent takrorlash → xat yo'q.
+- Eslatma (uchrashuvdan oldin) xati yo'q — scheduler talab qiladi, v1 ko'lamida emas; UI'da ham va'da qilinmagan.
+
+**AI xatolari:**
+- Birinchi variantda mavzu (subject) satrlari juda uzun va takrorlanuvchi edi (ruff E501) — `when["label"]` bilan soddalashtirildi.
+- Test fayli oxiriga mavzuga aloqasiz test (`…timestamps_are_utc_in_db`) qo'shib yuborilgan edi — olib tashlandi; `pytest.raises(Exception)` → `DomainError`.
+
 ## 11-bosqich — Ops
 
 ## 12-bosqich — Hujjat va yakun

@@ -179,6 +179,29 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi bosqichlar bo'yicha qur
 
 ## 6-bosqich — State machine
 
+**Prompt (qisqacha):** "davom et" — 6-bosqich (state machine, transition service, status history, confirm/cancel/complete, bekor qilish siyosati, o'tishlar matritsasi).
+
+**Generatsiya qilindi:**
+- `apps/bookings/state_machine.py` — sof: `TRANSITIONS` jadvali, `Context`, guard'lar (`_not_started`, `_started`, `_cancel` — mijoz uchun deadline, xodim/admin uchun sabab majburiy), `check_transition`.
+- `services.transition_booking` — `select_for_update(booking)`, ko'rinmasa 404, bekor qilish maydonlari (`cancelled_at/by/reason`), history. `auto_confirm` endi ham shu yo'ldan (`actor=None` → `system`).
+- `Booking.save()` — service belgisisiz status o'zgarishini rad etadi (`StatusChangeError`).
+- `selectors.visible_bookings / can_view / visible_booking` — mijoz o'ziniki, xodim faqat bog'langan provider'niki, admin hammasi.
+- API: `GET /bookings`, `GET /bookings/{id}`, `POST /bookings/{id}/confirm|cancel|complete`. Javobga `customer`, `cancelled_at`, `cancel_reason` qo'shildi.
+- `tests/test_architecture.py` (grep + model himoyasi), ADR-007.
+- Testlar: `test_state_machine.py` (87 — 64 katakli matritsa + guard'lar), `test_booking_actions.py` (27), ikki admin parallel confirm (concurrency).
+
+**Qanday tekshirildi:** `pytest` 396/396; `apps/bookings/*` va `views/bookings.py` qamrovi 100%, jami 98%. Matritsa testi kutilgan natijani TASK 5.3 jadvalidan mustaqil yozilgan `ALLOWED` lug'atidan hisoblaydi va `TRANSITIONS` ni unga solishtiradi.
+
+**Qarorlar:**
+- Xato tartibi: mavjud bo'lmagan o'tish 409 → noto'g'ri rol 403 → guard'lar. Sabab: yakuniy holatdagi bronni kim so'rasa ham bir xil javob.
+- Xuddi shu holatga qayta o'tish — no-op emas, 409 (edge #23 da "409 yoki no-op" ruxsat berilgan; jadval bilan izchil bo'lishi uchun 409).
+- Xodim/admin bekor qilganda sabab majburiy — `pending` dan ham (jadvalda faqat `confirmed` qatorida yozilgan; izchillik uchun ikkalasiga).
+- `BookingStatusHistory` 5-bosqichda qo'shilgan edi; bu bosqichda barcha o'tishlar shunga yoziladi, alohida commit yo'q.
+- Pagination va filtrlar — 7-bosqich (ro'yxat hozircha to'liq).
+
+**AI xatolari:**
+- Arxitektura grep testi birinchi ishga tushishda `apps/common/exceptions.py: self.status = status` ni ushladi — bu `DomainError` ning HTTP statusi, bron emas. Faylni istisno qilish o'rniga (tekshiruvni susaytiradi) atribut `http_status` ga qayta nomlandi.
+
 ## 7-bosqich — API polish
 
 ## 8-bosqich — UI (mijoz)

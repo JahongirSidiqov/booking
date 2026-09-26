@@ -1,9 +1,10 @@
-from datetime import time
+from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
 
 import factory
 
 from apps.accounts.models import User
+from apps.bookings.models import Booking
 from apps.catalog.models import Service
 from apps.providers.models import Provider
 from apps.scheduling.models import AvailabilityRule
@@ -63,3 +64,22 @@ class AvailabilityRuleFactory(factory.django.DjangoModelFactory):
     weekday = 0
     start_time = time(9, 0)
     end_time = time(18, 0)
+
+
+class BookingFactory(factory.django.DjangoModelFactory):
+    """Writes rows directly (no service layer): for setting up state in tests only."""
+
+    class Meta:
+        model = Booking
+
+    customer = factory.SubFactory(UserFactory)
+    provider = factory.SubFactory(ProviderFactory)
+    service = factory.SubFactory(ServiceFactory)
+    start_at = datetime(2026, 10, 1, 4, 0, tzinfo=UTC)
+    end_at = factory.LazyAttribute(
+        lambda o: o.start_at + timedelta(minutes=o.service.duration_minutes)
+    )
+    status = Booking.Status.PENDING
+    service_name = factory.LazyAttribute(lambda o: o.service.name)
+    duration_minutes = factory.LazyAttribute(lambda o: o.service.duration_minutes)
+    price = factory.LazyAttribute(lambda o: o.service.price)

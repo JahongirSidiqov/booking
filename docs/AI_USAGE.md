@@ -267,6 +267,34 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi bosqichlar bo'yicha qur
 
 ## 9-bosqich — UI (dashboard)
 
+**Prompt (qisqacha):** "davom et" — 9-bosqich (bugungi kun ko'rinishi, bronlar jadvali, xizmatlar/xodimlar/ish vaqti muharriri, sozlamalar).
+
+**Generatsiya qilindi:**
+- `state_machine`: "sabab majburiy" qoidasi guard'dan ma'lumotga ko'chirildi (`reason_required_for`), `available_targets(ctx)` — dashboard tugmalari server qabul qiladigan o'tishlardan hisoblanadi (tugma bor, server rad etadi — degan holat yo'q).
+- `bookings/selectors`: qidiruv (`search`), `overlapping`, `day_kpis`, `upcoming_counts`.
+- `apps/web/access.py` (`staff_required`, `admin_required`, `own_provider`), `forms_dashboard.py`, view'lar: `dashboard_bookings.py` (bugun, ro'yxat, tafsilot, amallar), `dashboard_catalog.py` (xizmatlar, xodimlar, deaktivatsiya), `dashboard_schedule.py` (ish vaqti, dam olish, sozlamalar).
+- Shablonlar: sidebar layout (240px / mobil drawer, Esc bilan yopiladi), bugun (xodim ustunlari, ish vaqti oq / yopiq kulrang, bloklar xodim rangida, "hozir" chizig'i, 3 KPI), bronlar (filtrlar URL'da, desktop jadval / mobil card, sahifalash, tezkor tasdiqlash), tafsilot (mijoz kontakti `tel:`/`mailto:`, timeline, sababli bekor qilish dialogi), xizmat/xodim modal formalari (`?new=1`, `?edit=`), deaktivatsiya dialogi "N ta kelgusi bron" bilan, haftalik jadval muharriri (Alpine), dam olish ro'yxati, sozlamalar, 403.
+- Staff login'dan keyin `/dashboard/` ga tushadi; navbar'da "Boshqaruv".
+- Testlar: `tests/web/test_dashboard.py` (42), `available_targets` unit testlari (10), e2e: dashboard 8 sahifa × 360/1440 + mobil drawer va modal klaviatura bilan.
+
+**Qanday tekshirildi:** `pytest` 544/544 (e2e bilan), qamrov 98% (`dashboard_bookings.py` 100%). Skrinshotlar 360px va 1440px da ko'rib chiqildi.
+
+**Qarorlar:**
+- Kun ko'rinishi o'qi kamida 09–19, ish vaqti yoki bron chetga chiqsa kengayadi; xodim qoidalari (o'z zonasida) ko'ruvchi zonasiga har sana uchun aylantiriladi.
+- Bog'lanmagan xodim-foydalanuvchi bo'sh sahifa o'rniga tushuntirish ko'radi (edge #35).
+- Dashboard ish vaqti muharriri Alpine'ga tayanadi (mijoz qismidan farqli, JS'siz ishlamaydi) — ichki xodimlar uchun qabul qilinadigan cheklov.
+- Dam olish vaqti `datetime-local` bilan kiritiladi va xodimning zonasida talqin qilinadi; zona forma ustida yozilgan.
+- Bekor qilishda UI ham sababni majburiy qiladi, server ham (state machine).
+
+**AI xatolari (brauzer testlari va skrinshotlar topdi):**
+- **Kun ko'rinishida bloklar tepaga yopishgan, ish vaqti ko'rinmagan.** Sabab: `LANGUAGE_CODE="uz"` da Django float'ni `69,231` deb chiqaradi — CSS'da noto'g'ri, brauzer deklaratsiyani tashlab yuboradi. Django testlari matnni tekshirgani uchun ushlamadi; skrinshotda ko'rindi. Foizlar view'da `f"{x:.3f}%"` qilib formatlanadi + regressiya testi.
+- **Modal forma o'zi yopilib, sahifa qayta yuklanardi.** `dialog.close()` "close" hodisasini asinxron navbatga qo'yadi — u keyin qo'shilgan listener'ga tushib, sahifani tark etardi. `removeAttribute("open")` ga almashtirildi. Buni e2e test ("Execution context was destroyed") topdi.
+- 360px da navbar 2px keng edi (staff uchun "Boshqaruv" + avatar, logo `min-w-0` siz qisqarmasdi).
+- Konflikt ro'yxatida vaqt shablonda satr kesish bilan formatlangan edi ("2026-10-0104:00" chiqardi) — ko'rib chiqishda topildi, view'da mahalliy vaqtga formatlanadi.
+- Tahrir paytida ikki marta skriptli almashtirish ko'p qatorli funksiya imzosiga mos kelmadi, ruff keyin "ishlatilmagan" importni o'chirdi — `F821` bilan ushlandi, qo'lda tuzatildi.
+- `showModal()` fokusni yopish tugmasiga qo'yardi — formalarda birinchi maydonga `autofocus`.
+- Test yozishda: `get_by_role("button", name="Menyu")` "Menyuni yopish" ga ham mos keldi → `exact=True`.
+
 ## 10-bosqich — Notifications
 
 ## 11-bosqich — Ops

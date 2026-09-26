@@ -57,6 +57,7 @@ docker/      Dockerfile, entrypoint.sh
 
 ## Veb interfeys
 
+- Boshqaruv paneli (xodim va admin): `/dashboard/` — bugungi jadval va KPI, bronlar (filtr, qidiruv, tasdiqlash / bajarildi / bekor qilish), xizmatlar, xodimlar, haftalik ish vaqti va dam olishlar, sozlamalar. Xodim faqat o'z bronlari va ish vaqtini ko'radi.
 - Mijoz: `/` (xizmatlar) → `/book/<xizmat>/` (xodim → sana va vaqt → tasdiq → natija), `/bookings/`, `/login/`, `/register/`, `/profile/`.
 - Django templates + HTMX (sana almashganda faqat vaqt tanlagich yangilanadi) + Alpine.js + Tailwind CSS v4. Inter shrifti va barcha JS fayllar loyiha ichida (CDN'siz).
 - CSS'ni qayta yig'ish (Node.js kerak emas, Tailwind CLI o'zi yuklab olinadi):

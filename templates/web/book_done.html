@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load navbat %}
+{% block title %}Bron qabul qilindi{% endblock %}
+{% block main_class %}container-narrow py-10 md:py-16{% endblock %}
+{% block content %}
+<section class="flex flex-col items-center gap-4 text-center" aria-labelledby="done-title">
+  <span class="flex size-16 items-center justify-center rounded-full bg-success-soft text-success">{% icon "circle-check" 36 %}</span>
+  {% if booking.status == "confirmed" %}
+    <h1 id="done-title" class="text-2xl">Bron tasdiqlandi</h1>
+    <p class="text-muted">Sizni kutamiz.</p>
+  {% else %}
+    <h1 id="done-title" class="text-2xl">Bron qabul qilindi — tasdiqlashni kuting</h1>
+    <p class="max-w-[42ch] text-muted">Xodim bronni tasdiqlagach, holati «Bronlarim» sahifasida yangilanadi.</p>
+  {% endif %}
+</section>
+
+<dl class="card mt-8 divide-y divide-border">
+  <div class="flex justify-between gap-4 p-4"><dt class="text-muted">Xizmat</dt><dd class="text-right font-medium">{{ booking.service_name }}</dd></div>
+  <div class="flex justify-between gap-4 p-4"><dt class="text-muted">Xodim</dt><dd class="text-right font-medium">{{ booking.provider.name }}</dd></div>
+  <div class="flex justify-between gap-4 p-4"><dt class="text-muted">Vaqt</dt><dd class="text-right font-medium tabular-nums">{{ booking.start_at|local_short_day:display_tz }}, {{ booking.start_at|local_time:display_tz }}</dd></div>
+  <div class="flex justify-between gap-4 p-4"><dt class="text-muted">Holat</dt><dd>{% status_badge booking.status %}</dd></div>
+</dl>
+
+<div class="mt-6 flex flex-col gap-3 sm:flex-row">
+  <a href="{% url 'web:booking_detail' booking.pk %}" class="btn btn-primary btn-lg flex-1">Bronni koʻrish</a>
+  <a href="{% url 'web:home' %}" class="btn btn-secondary btn-lg flex-1">Yana bron qilish</a>
+</div>
+{% endblock %}

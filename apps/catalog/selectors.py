@@ -12,3 +12,7 @@ def service_list(*, include_inactive: bool = False) -> QuerySet[Service]:
 
 def service_get(*, pk, include_inactive: bool = False) -> Service | None:
     return service_list(include_inactive=include_inactive).filter(pk=pk).first()
+
+
+def service_by_slug(*, slug: str) -> Service | None:
+    return service_list().filter(slug=slug).first()

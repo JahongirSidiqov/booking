@@ -1,0 +1,82 @@
+{% load navbat %}<div id="time-picker" class="flex flex-col gap-5">
+  <nav class="flex items-center gap-1" aria-label="Sanalar">
+    {% if prev_week_url %}
+      <a href="{{ prev_week_url }}" hx-get="{{ prev_week_url }}" hx-target="#time-picker" hx-swap="outerHTML" hx-push-url="true" class="btn btn-ghost size-11 shrink-0 px-0" aria-label="Oldingi hafta">{% icon "chevron-left" 20 %}</a>
+    {% else %}
+      <span class="btn btn-ghost size-11 shrink-0 px-0" aria-disabled="true" aria-hidden="true">{% icon "chevron-left" 20 %}</span>
+    {% endif %}
+    <ul class="flex min-w-0 flex-1 snap-x gap-1 overflow-x-auto md:justify-between"
+        x-data x-init="$el.querySelector('[aria-current=date]')?.scrollIntoView({ inline: 'center', block: 'nearest' })">
+      {% for day in days %}
+        <li class="shrink-0 snap-start">
+          <a href="{{ day.url }}" hx-get="{{ day.url }}" hx-target="#time-picker" hx-swap="outerHTML" hx-push-url="true"
+             class="day" {% if day.date == selected %}aria-current="date"{% endif %}
+             aria-label="{{ day.date|short_day }}: {% if day.count %}{{ day.count }} ta boʻsh vaqt{% else %}boʻsh vaqt yoʻq{% endif %}">
+            <span class="text-xs font-medium">{{ day.date|short_day|slice:":2" }}</span>
+            <span class="text-lg font-semibold tabular-nums">{{ day.date.day }}</span>
+            <span class="text-[11px] tabular-nums {% if day.date != selected %}{% if day.count %}text-success{% else %}text-subtle{% endif %}{% endif %}">{% if day.count %}{{ day.count }} boʻsh{% else %}—{% endif %}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+    {% if next_week_url %}
+      <a href="{{ next_week_url }}" hx-get="{{ next_week_url }}" hx-target="#time-picker" hx-swap="outerHTML" hx-push-url="true" class="btn btn-ghost size-11 shrink-0 px-0" aria-label="Keyingi hafta">{% icon "chevron-right" 20 %}</a>
+    {% else %}
+      <span class="btn btn-ghost size-11 shrink-0 px-0" aria-disabled="true" aria-hidden="true">{% icon "chevron-right" 20 %}</span>
+    {% endif %}
+  </nav>
+
+  <div class="relative">
+  <div class="htmx-indicator absolute inset-x-0 top-0 z-10 flex flex-col gap-3 bg-bg-subtle pb-4" aria-hidden="true">
+    <div class="skeleton h-4 w-24"></div>
+    <div class="flex flex-wrap gap-2">{% for _ in "12345678" %}<div class="skeleton h-11 w-[4.5rem] rounded-full"></div>{% endfor %}</div>
+  </div>
+
+  <form method="get" action="{% url 'web:book' service.slug %}" class="picker-content flex flex-col gap-5"
+        x-data="{ picked: '', label: '' }">
+    <input type="hidden" name="provider" value="{{ provider.pk }}">
+    <p class="font-semibold">{{ selected|short_day }}</p>
+    {% if has_slots %}
+      {% for label, slots in groups %}
+        <fieldset>
+          <legend class="eyebrow">{{ label }}</legend>
+          {% if slots %}
+            <div class="mt-3 flex flex-wrap gap-2">
+              {% for slot in slots %}
+                <label class="chip">
+                  <input type="radio" name="start" value="{{ slot.value }}" data-label="{{ slot.label }}" required
+                         @change="picked = $event.target.value; label = $event.target.dataset.label">
+                  <span>{{ slot.label }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="mt-2 text-sm text-muted">Bu vaqtda boʻsh joy yoʻq</p>
+          {% endif %}
+        </fieldset>
+      {% endfor %}
+    {% else %}
+      <div class="card flex flex-col items-center gap-3 px-6 py-8 text-center">
+        <span class="flex size-12 items-center justify-center rounded-full bg-bg-subtle text-muted">{% icon "calendar-x" 24 %}</span>
+        <p class="font-semibold">Bu kunda boʻsh vaqt yoʻq</p>
+        {% if next_free %}
+          <a href="{{ next_free_url }}" hx-get="{{ next_free_url }}" hx-target="#time-picker" hx-swap="outerHTML" hx-push-url="true" class="btn btn-secondary">
+            Keyingi boʻsh kun: {{ next_free|short_day }}{% icon "chevron-right" 18 %}
+          </a>
+        {% else %}
+          <p class="text-muted">Yaqin kunlarda boʻsh vaqt topilmadi. Boshqa xodimni tanlab koʻring.</p>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {% if has_slots %}
+      <div class="sticky bottom-0 -mx-4 flex flex-col gap-3 border-t border-border bg-surface px-4 py-3 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
+        <p class="text-sm text-muted" aria-live="polite">
+          <span class="font-medium text-text">{{ provider.name }}</span> · {{ selected|short_day }}<span x-show="label" x-cloak> · <span class="font-medium text-text tabular-nums" x-text="label"></span></span>
+        </p>
+        <button type="submit" class="btn btn-primary btn-lg btn-block" x-bind:disabled="!picked">Davom etish</button>
+      </div>
+    {% endif %}
+  </form>
+  </div>
+</div>

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load navbat %}
+{% block title %}Xizmatlar{% endblock %}
+{% block content %}
+<section aria-labelledby="services-title">
+  <p class="eyebrow">Onlayn navbat</p>
+  <h1 id="services-title" class="mt-3 text-3xl md:text-4xl">Xizmatni tanlang</h1>
+  <p class="mt-4 max-w-[60ch] text-muted">Xodim va qulay vaqtni tanlang — bron bir daqiqada tayyor.</p>
+
+  {% if services %}
+    <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {% for service in services %}
+        <li class="card flex flex-col gap-3 p-5">
+          <div class="flex-1">
+            <h2 class="text-lg">{{ service.name }}</h2>
+            {% if service.description %}<p class="mt-1 line-clamp-2 text-muted">{{ service.description }}</p>{% endif %}
+          </div>
+          <p class="flex items-center gap-4 text-sm text-muted tabular-nums">
+            <span class="flex items-center gap-1.5">{% icon "timer" 16 %}{{ service.duration_minutes|duration }}</span>
+            <span class="font-semibold text-text">{{ service.price|money:business.currency }}</span>
+          </p>
+          <a href="{% url 'web:book' service.slug %}" class="btn btn-secondary btn-block">{% icon "calendar" 18 %}Vaqt tanlash</a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="mt-8">
+      {% include "components/empty_state.html" with icon_name="calendar-x" title="Hozircha xizmatlar yoʻq" body="Biznes xizmatlarni qoʻshgach, ular shu yerda koʻrinadi." %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

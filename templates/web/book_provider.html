@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load navbat %}
+{% block title %}{{ service.name }} — xodim{% endblock %}
+{% block main_class %}container-narrow py-6 md:py-10{% endblock %}
+{% block content %}
+{% include "web/_book_header.html" %}
+<form method="get" action="{% url 'web:book' service.slug %}" x-data="{ chosen: '' }">
+  <fieldset>
+    <legend class="text-lg font-semibold">Xodimni tanlang</legend>
+    {% if providers %}
+      <div class="mt-4 flex flex-col gap-3">
+        {% for provider in providers %}
+          <label class="card flex cursor-pointer items-center gap-4 p-4 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary-soft has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary">
+            <input type="radio" name="provider" value="{{ provider.pk }}" class="sr-only" x-model="chosen" required>
+            <span class="flex size-12 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white" style="background: {{ provider.color }}" aria-hidden="true">{{ provider.name|initials }}</span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-semibold">{{ provider.name }}</span>
+              {% if provider.bio %}<span class="block truncate text-sm text-muted">{{ provider.bio }}</span>{% endif %}
+            </span>
+            <span class="text-primary" x-show="chosen === '{{ provider.pk }}'" x-cloak>{% icon "circle-check" 22 %}</span>
+          </label>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="mt-4">
+        {% include "components/empty_state.html" with icon_name="user" title="Bu xizmat uchun xodim yoʻq" body="Boshqa xizmatni tanlang yoki keyinroq urinib koʻring." action_url=back_url action_label="Xizmatlarga qaytish" %}
+      </div>
+    {% endif %}
+  </fieldset>
+  {% if providers %}
+    <div class="sticky bottom-0 -mx-4 mt-6 border-t border-border bg-surface px-4 py-3 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
+      <button type="submit" class="btn btn-primary btn-lg btn-block" x-bind:disabled="!chosen">Davom etish</button>
+    </div>
+  {% endif %}
+</form>
+{% endblock %}

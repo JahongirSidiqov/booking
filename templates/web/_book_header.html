@@ -1,0 +1,10 @@
+{% load navbat %}<div class="mb-6 flex flex-col gap-4">
+  <div class="flex items-center gap-3">
+    <a href="{{ back_url }}" class="btn btn-ghost -ml-2 size-11 px-0" aria-label="Orqaga">{% icon "arrow-left" 20 %}</a>
+    <div class="min-w-0">
+      <h1 class="truncate text-xl md:text-2xl">{{ service.name }}</h1>
+      <p class="text-sm text-muted tabular-nums">{{ service.duration_minutes|duration }} · {{ service.price|money:business.currency }}</p>
+    </div>
+  </div>
+  {% include "components/stepper.html" with steps=booking_steps %}
+</div>

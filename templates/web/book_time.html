@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}{{ service.name }} — vaqt{% endblock %}
+{% block main_class %}container-narrow py-6 md:py-10{% endblock %}
+{% block content %}
+{% include "web/_book_header.html" %}
+<h2 class="sr-only">Sana va vaqtni tanlang</h2>
+{% include "web/partials/time_picker.html" %}
+{% endblock %}

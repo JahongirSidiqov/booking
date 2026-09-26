@@ -366,6 +366,28 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi 13 bosqich (0–12) bo'
 - **8-bosqichdan qolgan buzuq qator:** README va CLAUDE.md da `.\scripts\build-css.ps1` o'rnida `.\scripts<backspace>uild-css.ps1` turgan edi — Python qatoridagi `\b` backspace belgisiga aylangan. README'ni o'qishda topildi; bunday belgilarni butun repoda qidiradigan test qo'shildi (u darhol ikkala qatorni ushladi).
 - Skrinshot skriptida yashirin (`sr-only`) radio'ni to'g'ridan-to'g'ri bosishga urinish — foydalanuvchi kabi card (label) bosiladigan qilindi.
 
+## Bonus 1 — timezone tanlash (UI) va iCal eksport
+
+**Prompt (qisqacha):** 12-bosqichdan keyin "davom et" — TASK 1-bo'limidagi bonuslar tartibda.
+
+**Avval tekshirildi (qaysi bonuslar asosiy bosqichlarda bajarilgan):** sozlanadigan bekor qilish siyosati (sozlamalar + state machine), email (10), dashboard KPI (9), Swagger (7), prod compose profili (11). Yangi qilinishi kerak: timezone UI (qisman), iCal, buffer time, "istalgan xodim".
+
+**Generatsiya qilindi:**
+- Timezone: anonim foydalanuvchi zonasi sessiyada (`DisplayTimezoneMiddleware`: profil → sessiya → biznes, sessiyadagi qiymat IANA bo'yicha qayta tekshiriladi), `POST /timezone/`, ogohlantirish chizig'ida "Qurilma zonasiga oʻtish" tugmasi.
+- iCal: `apps/bookings/ical.py` — sof RFC 5545 generatori (escape, oktet bo'yicha 75 belgili qator bo'lish, CRLF, UID, `SEQUENCE`, `STATUS`), `GET /api/v1/bookings/{id}/ical` va `/bookings/<id>/ical/` (faqat egasi), natija va tafsilot sahifalarida havola.
+- Testlar: `tests/unit/test_ical.py` (9), `tests/web/test_bonus_ical_timezone.py` (13), e2e: Dubay zonasidagi qurilma → chiziq → bir bosish.
+
+**Qanday tekshirildi:** `pytest` 593/593 (e2e bilan), OpenAPI `--fail-on-warn` toza; Dubay zonasini emulyatsiya qilib skrinshot ko'rib chiqildi.
+
+**Qarorlar:** kutubxonasiz iCal (bitta VEVENT uchun ortiqcha bog'liqlik); `.ics` faqat bron egasiga (TASK 6.1: "egasi"), provider/admin'ga 404; bekor qilingan bron uchun havola ko'rsatilmaydi, lekin fayl `STATUS:CANCELLED` bilan olinadi.
+
+**AI xatolari:**
+- Qator bo'lishni belgilar bo'yicha emas, **oktet** bo'yicha qilish kerakligi oldindan hisobga olindi (`ʻ` UTF-8 da 2 bayt); test ko'p baytli belgi bo'linmasligini tekshiradi.
+- `<p>` ichiga `<form>` qo'yilgan edi (noto'g'ri HTML — brauzer paragrafni erta yopadi) — `<div>` ga almashtirildi.
+- Yangi chiziq tugmasi e2e login yordamchisini buzdi: `page.click("button[type=submit]")` endi yashirin chiziq tugmasini birinchi topib, 30 soniya kutardi (7 test yiqildi, suite 4 barobar sekinlashdi). Selektor `main` bilan cheklandi.
+- 360px skrinshotda tugma matnni tor ustunga siqib qo'ygan, bosish maydoni ~20px edi — mobilda alohida qatorga va 44px maydonga o'tkazildi.
+- OpenAPI tavsifida ASCII apostrof (`o'chiradi`) — apostrof testi ushladi.
+
 ## Nimani o'zim yozdim / o'zgartirdim
 
 Rostini aytganda: **ilova kodining deyarli hammasini AI yozdi.** Bu sessiyada kuzatilgan inson hissasi:
@@ -384,7 +406,7 @@ Keyin kodni qo'lda o'zgartirsangiz, shu bo'limga nimani va nega o'zgartirganingi
 | Ko'rsatkich | Qiymat |
 |---|---|
 | Bosqichlar | 13 (0–12), har biri alohida tasdiqlangan |
-| Testlar | ~570 (unit, API, web, concurrency, email, e2e) — hammasi yashil |
+| Testlar | 593 (unit, API, web, concurrency, email, e2e) — hammasi yashil |
 | Qamrov | ~98% |
 | TASK 8-bo'limdagi holatlar | 38/38, har biri nomli test bilan |
 | ADR | 9 (001–009) |

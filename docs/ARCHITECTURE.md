@@ -133,7 +133,8 @@ pending ──confirm──▶ confirmed ──complete──▶ completed
 - Ish vaqti qoidalari — xodimning mahalliy `time` qiymatlari (xodim zonasi yoki biznes zonasi), har sana uchun UTC'ga aylantiriladi.
 - API kirishi: datetime **offset bilan majburiy** (`AwareDateTimeField`); offset'siz → `422`. Sana parametrlari (`date`, `from`, `to`) so'rovchining zonasida (`?tz=` → profil → biznes).
 - API chiqishi: UTC `Z` + `start_at_local` / `start_local`.
-- HTML: `DisplayTimezoneMiddleware` foydalanuvchi zonasini faollashtiradi (`/api/` va `/healthz` bundan mustasno); brauzer zonasi farq qilsa ogohlantirish chizig'i.
+- HTML: `DisplayTimezoneMiddleware` zonani faollashtiradi: profil → sessiya (anonim) → biznes (`/api/` va `/healthz` bundan mustasno). Brauzer zonasi farq qilsa ogohlantirish chizig'ida "Qurilma zonasiga o'tish" tugmasi (`POST /timezone/`, IANA bo'yicha tekshiriladi).
+- Kalendar eksporti (`bookings/ical.py`, RFC 5545): vaqtlar UTC `Z`, UID bron ID'sidan, `SEQUENCE` status o'zgarishlari soni — kalendar bekor qilishni yangilanish sifatida qabul qiladi.
 
 ## 7. Autentifikatsiya va ruxsatlar
 

@@ -139,3 +139,26 @@ def test_other_providers_are_not_blocked(scenario):
     results = run_parallel(calls)
 
     assert [status for status, _ in results] == [201] * 4, results
+
+
+def test_edge_23_two_admins_confirm_at_once(scenario):
+    """The booking row lock makes the second admin see 'confirmed' and get a 409."""
+    haircut, sardor = scenario
+    customer = UserFactory(role=User.Role.CUSTOMER)
+    created = run_parallel([post_as(customer, booking_body(haircut, sardor, SLOT_0900))])
+    assert created == [(201, "pending")]
+    booking = Booking.objects.get()
+    admins = [UserFactory(role=User.Role.ADMIN) for _ in range(2)]
+
+    def confirm_as(user):
+        def call():
+            client = APIClient()
+            client.force_authenticate(user)
+            return client.post(f"{BOOKINGS}/{booking.pk}/confirm", {}, format="json")
+
+        return call
+
+    results = run_parallel([confirm_as(a) for a in admins])
+
+    assert sorted(results) == [(200, "confirmed"), (409, "INVALID_TRANSITION")], results
+    assert booking.history.count() == 2

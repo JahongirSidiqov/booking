@@ -78,12 +78,12 @@ def assert_no_horizontal_scroll(page, label):
     assert overflow <= 0, f"{label}: page is {overflow}px wider than the viewport"
 
 
-def login(page, base, customer):
+def login(page, base, user, landing="/"):
     page.goto(f"{base}/login/")
-    page.fill("#id_username", customer.email)
+    page.fill("#id_username", user.email)
     page.fill("#id_password", DEFAULT_PASSWORD)
     page.click("button[type=submit]")
-    page.wait_for_url(f"{base}/")
+    page.wait_for_url(f"{base}{landing}")
 
 
 @pytest.mark.parametrize("device", WIDTHS)
@@ -155,4 +155,69 @@ def test_htmx_day_switch_keeps_page_and_updates_url(browser, live_server, scenar
     page.wait_for_function("() => location.search.includes('date=')")
     assert page.evaluate("() => window.__marker") == "same-page"  # swapped, not reloaded
     assert page.locator("a.day").nth(2).get_attribute("aria-current") == "date"
+    page.close()
+
+
+# --- dashboard --------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def admin_scenario(scenario):
+    from datetime import timedelta
+
+    from django.utils import timezone as dj_timezone
+
+    from tests.factories import BookingFactory
+
+    service, provider, customer = scenario
+    admin = UserFactory(role=User.Role.ADMIN, email="admin@example.com", full_name="Admin Adminov")
+    start = dj_timezone.now().replace(minute=0, second=0, microsecond=0) + timedelta(hours=2)
+    booking = BookingFactory(customer=customer, provider=provider, service=service, start_at=start)
+    return service, provider, admin, booking
+
+
+@pytest.mark.parametrize("device", WIDTHS)
+def test_dashboard_pages_fit_the_viewport(browser, live_server, admin_scenario, device):
+    _service, provider, admin, booking = admin_scenario
+    page = browser.new_page(viewport={"width": WIDTHS[device], "height": 800})
+    base = live_server.url
+    login(page, base, admin, landing="/dashboard/")
+    pages = {
+        "dash-today": "/dashboard/",
+        "dash-bookings": "/dashboard/bookings/",
+        "dash-booking": f"/dashboard/bookings/{booking.pk}/",
+        "dash-services": "/dashboard/services/",
+        "dash-service-form": "/dashboard/services/?new=1",
+        "dash-providers": "/dashboard/providers/",
+        "dash-availability": f"/dashboard/providers/{provider.pk}/availability/",
+        "dash-settings": "/dashboard/settings/",
+    }
+    for name, path in pages.items():
+        page.goto(base + path)
+        assert_no_horizontal_scroll(page, f"{name}@{device}")
+        shot(page, f"{device}-{name}")
+    page.close()
+
+
+def test_mobile_drawer_and_modal_are_keyboard_operable(browser, live_server, admin_scenario):
+    _service, _provider, admin, booking = admin_scenario
+    page = browser.new_page(viewport={"width": 360, "height": 800})
+    base = live_server.url
+    login(page, base, admin, landing="/dashboard/")
+
+    nav = page.locator("#dashboard-nav")
+    assert not nav.is_visible() or nav.bounding_box()["x"] < 0  # off-canvas at first
+    page.get_by_role("button", name="Menyu", exact=True).click()
+    page.wait_for_timeout(350)
+    assert nav.bounding_box()["x"] >= 0
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(350)
+    assert nav.bounding_box()["x"] < 0
+
+    page.goto(f"{base}/dashboard/bookings/{booking.pk}/")
+    page.get_by_role("button", name="Bronni bekor qilish").click()
+    dialog = page.locator("#cancel-dialog")
+    assert dialog.evaluate("d => d.open && d.matches(':modal')")
+    page.keyboard.press("Escape")
+    assert dialog.evaluate("d => !d.open")
     page.close()

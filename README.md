@@ -55,6 +55,26 @@ docs/        arxitektura, edge case'lar, AI jurnali, ADR'lar
 docker/      Dockerfile, entrypoint.sh
 ```
 
+## Veb interfeys
+
+- Mijoz: `/` (xizmatlar) → `/book/<xizmat>/` (xodim → sana va vaqt → tasdiq → natija), `/bookings/`, `/login/`, `/register/`, `/profile/`.
+- Django templates + HTMX (sana almashganda faqat vaqt tanlagich yangilanadi) + Alpine.js + Tailwind CSS v4. Inter shrifti va barcha JS fayllar loyiha ichida (CDN'siz).
+- CSS'ni qayta yig'ish (Node.js kerak emas, Tailwind CLI o'zi yuklab olinadi):
+
+```powershell
+.\scriptsuild-css.ps1
+```
+
+`static/css/app.css` repoda saqlanadi; CI uning shablonlarga mosligini tekshiradi, Docker image uni qaytadan yig'adi.
+
+- Brauzer testlari (360px / 1440px, faqat klaviatura bilan bron):
+
+```powershell
+pip install -r requirements/e2e.txt
+python -m playwright install chromium
+pytest tests/e2e
+```
+
 ## API
 
 - Swagger UI: http://localhost:8000/api/docs/

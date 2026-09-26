@@ -230,6 +230,41 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi bosqichlar bo'yicha qur
 
 ## 8-bosqich — UI (mijoz)
 
+**Prompt (qisqacha):** "davom et" — 8-bosqich. Boshlashdan oldin TASK 10-bo'lim va `frontend-uiux-skill` o'qildi (mobile-first, bitta primary, holatlar, `ʻ`, Lucide, reduced-motion, placeholder yo'q).
+
+**Generatsiya qilindi:**
+- Asboblar (versiyalar qotirilgan): Tailwind CLI v4.3.3 (standalone, Node'siz), htmx 2.0.11, Alpine.js 3.17.4, Lucide 1.48.0 (faqat ishlatilgan 21 ta SVG), Inter 5.3.0 (latin + cyrillic woff2, loyiha ichida).
+- `static/src/tokens.css` (TASK 10.2 tokenlari `@theme` da — CSS o'zgaruvchilari ham, utility'lar ham shu yerdan), `app.css` (btn/input/card/badge/chip/day/skeleton/toast/dialog komponentlari, `:focus-visible`, `prefers-reduced-motion`).
+- `apps/web`: `text.py` (`ʻ` konstanta, `60 000 soʻm`, "Pa, 1-okt"), `templatetags/navbat.py` (`{% icon %}`, `status_badge`, filtrlar), `DisplayTimezoneMiddleware` (sahifalar foydalanuvchi zonasida, `/api/` dan tashqari), forms (`StyledFormMixin` — `aria-invalid`/`aria-describedby`), view'lar: `booking_flow.py`, `customer.py`, `account.py`.
+- Shablonlar: `base.html` (skip-link, sticky navbar, timezone ogohlantirishi, `aria-live` toast — xato toasti o'zi yopilmaydi), `components/`, bron oqimi 4 qadam, `partials/time_picker.html` (HTMX), bronlarim (3 tab + empty state'lar), tafsilot (timeline + native `<dialog>` bilan bekor qilish), login/register/profile, 404/500.
+- `scripts/build-css.ps1`, Dockerfile'da CSS build bosqichi, CI'da "commit qilingan CSS eskirmaganmi" tekshiruvi.
+- Testlar: `tests/web/` (47), `tests/e2e/test_ui_browser.py` (4, Playwright + Chromium, o'rnatilmagan bo'lsa skip).
+
+**Qanday tekshirildi:**
+- `pytest` 489/489 (e2e bilan), qamrov 98%.
+- **Haqiqiy brauzer (Playwright, headless Chromium):** 5 sahifa × 360px/1440px da gorizontal scroll yo'qligi; bron oqimi **faqat klaviatura** bilan (Tab/Space/Enter) boshidan oxirigacha; HTMX kun almashtirish sahifani qayta yuklamasligi va URL yangilanishi.
+- Skrinshotlarni o'zim ko'rib chiqdim (360px va 1440px, har qadam) — quyidagi 3 ta muammo shu yo'l bilan topildi.
+
+**Qarorlar:**
+- Bron qadamlari query parametrlar bilan (`?provider=…&start=…`) — har qadamning URL'i bor, orqaga tugmasi ishlaydi, JS o'chiq bo'lsa ham forma ishlaydi (chiplar oddiy radio input).
+- `409 SLOT_TAKEN` → 2-qadamga redirect, toast "Bu vaqt hozirgina band qilindi", slotlar yangidan, tanlov o'chgan. Tasdiq sahifasi ochilganda slot allaqachon band bo'lsa ham shu yo'l.
+- Tasdiq formasida `idempotency_key` (uuid4) — ikki marta bosish bitta bron.
+- Modal — native `<dialog>` (`showModal()`): focus trap, Esc, fon inert brauzerning o'zidan; body scroll `:has(dialog[open])` bilan.
+- Skeleton faqat so'rov 300ms dan uzoq cho'zilsa ko'rinadi va layoutni surmaydi (absolute overlay).
+- Tasdiq sahifasidagi ishonch mikromatnida "SMS/emailda eslatma" yo'q — eslatma funksiyasi yo'q, yolg'on va'da bo'lardi.
+- Brauzer testlari CI'da ishlamaydi (Chromium yuklanmaydi) — lokal/qo'lda; hujjatlangan.
+
+**AI xatolari:**
+- Lucide SVG'lari litsenziya izohi (`<!-- ... -->`) bilan boshlanadi; ikonka tegi birinchi `>` ni `<svg>` tegi deb olardi. Fayllarni yuklab olgach ko'rib, ishlatishdan oldin tuzatildi.
+- `@apply tabular` — o'zimning klassim, utility emas; Tailwind build yiqildi → `tabular-nums`.
+- Tailwind CLI `-o` OneDrive papkasida `EEXIST mkdir` bilan yiqiladi (Bun runtime bug'i). CSS stdout orqali yoziladi; PowerShell 5.1 `>` UTF-16 ga o'girgani uchun `cmd /c` ishlatiladi.
+- Bash heredoc'da `'` + `ʻ` aralash matn yana buzildi — shablonlar Write vositasi bilan qayta yozildi.
+- **Testdagi xato:** kutilgan qiymat "Ch, 1-okt" TASK wireframe'dan ko'chirilgan edi. 2026-yil 1-oktabr — payshanba ("Pa"); wireframe 2025-yil kalendariga mos. Kod to'g'ri edi, test tuzatildi.
+- **Brauzer testi topgan xato:** 360px da 1-qadam 82px keng. Sabab: `<fieldset>` brauzerda `min-width: min-content`, uzun xodim ismi `truncate` o'rniga sahifani kengaytirardi. Global `fieldset { min-width: 0 }`.
+- **Skrinshotdan topilgan xatolar:** sana chizig'i 360px da `justify-between` + overflow tufayli chap tomoni kesilgan (tanlangan kun ko'rinmasdi), "51 boʻsh" ikki qatorga bo'linardi, ko'rinmas skeleton slotlar ustida ~150px bo'sh joy egallardi. Chiziq scroll + tanlangan kunni markazga olish, `whitespace-nowrap`, skeleton absolute overlay.
+- Birinchi e2e ishga tushishda Google Fonts sabab `load` 30s timeout. Testni yumshatish o'rniga Inter loyiha ichiga olindi (tezroq birinchi ekran, tashqi bog'liqlik yo'q) — e2e 132s → 30s.
+- Playwright `DJANGO_ALLOW_ASYNC_UNSAFE` ni funksiya darajasida qo'ygan edim — DB teardown modul darajasidagi brauzer ochiq paytda bo'ladi; modul darajasiga ko'chirildi.
+
 ## 9-bosqich — UI (dashboard)
 
 ## 10-bosqich — Notifications

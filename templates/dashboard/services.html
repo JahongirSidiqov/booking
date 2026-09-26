@@ -1,0 +1,78 @@
+{% extends "dashboard/base.html" %}
+{% load navbat %}
+{% block title %}Xizmatlar{% endblock %}
+{% block dashboard %}
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <h1 class="text-2xl md:text-3xl">Xizmatlar</h1>
+  <a href="?new=1" class="btn btn-primary">Xizmat qoʻshish</a>
+</div>
+
+{% if rows %}
+  <ul class="mt-6 flex flex-col gap-3">
+    {% for row in rows %}
+      {% with s=row.service %}
+        <li class="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+          <div class="min-w-0 flex-1">
+            <p class="flex items-center gap-2">
+              <span class="truncate font-semibold">{{ s.name }}</span>
+              {% if not s.is_active %}<span class="badge badge-cancelled">Nofaol</span>{% endif %}
+            </p>
+            <p class="text-sm text-muted tabular-nums">{{ s.duration_minutes|duration }} · {{ s.price|money:business.currency }} · /{{ s.slug }}</p>
+          </div>
+          <div class="flex gap-2">
+            <a href="?edit={{ s.pk }}" class="btn btn-secondary btn-sm">Tahrirlash</a>
+            {% if s.is_active %}
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('deactivate-{{ s.pk }}').showModal()">Nofaol qilish</button>
+              <dialog id="deactivate-{{ s.pk }}" class="modal" aria-labelledby="deactivate-title-{{ s.pk }}">
+                <form method="post" action="{% url 'web:dashboard_service_deactivate' s.pk %}" class="flex flex-col gap-4 p-6">
+                  {% csrf_token %}
+                  <h2 id="deactivate-title-{{ s.pk }}" class="text-xl">«{{ s.name }}» nofaol qilinsinmi?</h2>
+                  {% if row.upcoming %}
+                    <p class="flex items-start gap-2 rounded-md bg-warning-soft p-3 text-sm">{% icon "triangle-alert" 18 "mt-0.5 text-warning" %}<span>Bu xizmatga <strong>{{ row.upcoming }} ta kelgusi bron</strong> bor. Ular saqlanadi; yangi bron qabul qilinmaydi.</span></p>
+                  {% else %}
+                    <p class="text-muted">Mijozlar bu xizmatni koʻrmay qoladi. Xohlagan paytda qayta faollashtirish mumkin.</p>
+                  {% endif %}
+                  <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" class="btn btn-secondary" onclick="this.closest('dialog').close()">Ortga</button>
+                    <button type="submit" class="btn btn-destructive">Nofaol qilish</button>
+                  </div>
+                </form>
+              </dialog>
+            {% endif %}
+          </div>
+        </li>
+      {% endwith %}
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="mt-6">{% include "components/empty_state.html" with icon_name="timer" title="Hali xizmatlar yoʻq" body="Birinchi xizmatni qoʻshing — mijozlar shu roʻyxatdan tanlaydi." action_url="?new=1" action_label="Xizmat qoʻshish" %}</div>
+{% endif %}
+
+{% if show_form %}
+  <dialog class="modal" data-autoshow aria-labelledby="service-form-title" open>
+    <form method="post" class="flex max-h-[90dvh] flex-col gap-4 overflow-y-auto p-6" novalidate x-data="{ busy: false }" @submit="busy = true">
+      {% csrf_token %}
+      <div class="flex items-start justify-between gap-4">
+        <h2 id="service-form-title" class="text-xl">{% if editing %}Xizmatni tahrirlash{% else %}Yangi xizmat{% endif %}</h2>
+        <a href="{% url 'web:dashboard_services' %}" class="-m-2 flex size-11 items-center justify-center rounded-md text-muted" aria-label="Oynani yopish">{% icon "x" 20 %}</a>
+      </div>
+      {% include "components/form_errors.html" %}
+      {% include "components/field.html" with field=form.name %}
+      <div class="grid gap-4 sm:grid-cols-2">
+        {% include "components/field.html" with field=form.duration_minutes %}
+        {% include "components/field.html" with field=form.price %}
+      </div>
+      {% include "components/field.html" with field=form.description %}
+      <div class="grid gap-4 sm:grid-cols-2">
+        {% include "components/field.html" with field=form.slug %}
+        {% include "components/field.html" with field=form.sort_order %}
+      </div>
+      <label class="flex min-h-11 items-center gap-3">{{ form.is_active }}<span>{{ form.is_active.label }}</span></label>
+      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <a href="{% url 'web:dashboard_services' %}" class="btn btn-secondary">Bekor qilish</a>
+        <button type="submit" class="btn btn-primary" x-bind:disabled="busy">{% if editing %}Oʻzgarishlarni saqlash{% else %}Xizmatni qoʻshish{% endif %}</button>
+      </div>
+    </form>
+  </dialog>
+{% endif %}
+{% endblock %}

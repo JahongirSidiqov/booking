@@ -1,0 +1,23 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Sozlamalar{% endblock %}
+{% block dashboard %}
+<h1 class="text-2xl md:text-3xl">Sozlamalar</h1>
+<form method="post" class="card mt-6 flex max-w-[640px] flex-col gap-4 p-5" novalidate x-data="{ busy: false }" @submit="busy = true">
+  {% csrf_token %}
+  {% include "components/form_errors.html" %}
+  {% include "components/field.html" with field=form.name %}
+  <div class="grid gap-4 sm:grid-cols-2">
+    {% include "components/field.html" with field=form.timezone %}
+    {% include "components/field.html" with field=form.currency %}
+  </div>
+  <p class="eyebrow mt-2">Bron qoidalari</p>
+  <div class="grid gap-4 sm:grid-cols-2">
+    {% include "components/field.html" with field=form.slot_step_minutes %}
+    {% include "components/field.html" with field=form.min_lead_time_minutes %}
+    {% include "components/field.html" with field=form.max_advance_days %}
+    {% include "components/field.html" with field=form.cancellation_deadline_hours %}
+  </div>
+  <label class="flex min-h-11 items-center gap-3">{{ form.auto_confirm }}<span>{{ form.auto_confirm.label }}</span></label>
+  <button type="submit" class="btn btn-primary self-start" x-bind:disabled="busy">Sozlamalarni saqlash</button>
+</form>
+{% endblock %}

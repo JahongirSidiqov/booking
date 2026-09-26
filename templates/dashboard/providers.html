@@ -1,0 +1,94 @@
+{% extends "dashboard/base.html" %}
+{% load navbat %}
+{% block title %}Xodimlar{% endblock %}
+{% block dashboard %}
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <h1 class="text-2xl md:text-3xl">Xodimlar</h1>
+  <a href="?new=1" class="btn btn-primary">Xodim qoʻshish</a>
+</div>
+
+{% if rows %}
+  <ul class="mt-6 flex flex-col gap-3">
+    {% for row in rows %}
+      {% with p=row.provider %}
+        <li class="card flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
+          <div class="flex min-w-0 flex-1 items-center gap-3">
+            <span class="flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white" style="background: {{ p.color }}" aria-hidden="true">{{ p.name|initials }}</span>
+            <div class="min-w-0">
+              <p class="flex items-center gap-2"><span class="truncate font-semibold">{{ p.name }}</span>{% if not p.is_active %}<span class="badge badge-cancelled">Nofaol</span>{% endif %}</p>
+              <p class="truncate text-sm text-muted">
+                {% for s in p.services.all %}{{ s.name }}{% if not forloop.last %}, {% endif %}{% empty %}Xizmat biriktirilmagan{% endfor %}
+                · {% if p.user %}{{ p.user.email }}{% else %}akkauntsiz{% endif %}
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <a href="{% url 'web:dashboard_availability' p.pk %}" class="btn btn-secondary btn-sm">{% icon "clock" 16 %}Ish vaqti</a>
+            <a href="?edit={{ p.pk }}" class="btn btn-secondary btn-sm">Tahrirlash</a>
+            {% if p.is_active %}
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('deactivate-{{ p.pk }}').showModal()">Nofaol qilish</button>
+              <dialog id="deactivate-{{ p.pk }}" class="modal" aria-labelledby="deactivate-title-{{ p.pk }}">
+                <form method="post" action="{% url 'web:dashboard_provider_deactivate' p.pk %}" class="flex flex-col gap-4 p-6">
+                  {% csrf_token %}
+                  <h2 id="deactivate-title-{{ p.pk }}" class="text-xl">«{{ p.name }}» nofaol qilinsinmi?</h2>
+                  {% if row.upcoming %}
+                    <p class="flex items-start gap-2 rounded-md bg-warning-soft p-3 text-sm">{% icon "triangle-alert" 18 "mt-0.5 text-warning" %}<span>Bu xodimda <strong>{{ row.upcoming }} ta kelgusi bron</strong> bor. Ular saqlanadi; yangi bron qabul qilinmaydi. Kerak boʻlsa, mijozlar bilan bogʻlanib, bronlarni bekor qiling.</span></p>
+                  {% else %}
+                    <p class="text-muted">Xodim mijozlarga koʻrinmay qoladi. Xohlagan paytda qayta faollashtirish mumkin.</p>
+                  {% endif %}
+                  <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" class="btn btn-secondary" onclick="this.closest('dialog').close()">Ortga</button>
+                    <button type="submit" class="btn btn-destructive">Nofaol qilish</button>
+                  </div>
+                </form>
+              </dialog>
+            {% endif %}
+          </div>
+        </li>
+      {% endwith %}
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="mt-6">{% include "components/empty_state.html" with icon_name="user" title="Hali xodimlar yoʻq" body="Xodim qoʻshing, unga xizmatlar va ish vaqtini belgilang." action_url="?new=1" action_label="Xodim qoʻshish" %}</div>
+{% endif %}
+
+{% if show_form %}
+  <dialog class="modal" data-autoshow aria-labelledby="provider-form-title" open>
+    <form method="post" class="flex max-h-[90dvh] flex-col gap-4 overflow-y-auto p-6" novalidate x-data="{ busy: false }" @submit="busy = true">
+      {% csrf_token %}
+      <div class="flex items-start justify-between gap-4">
+        <h2 id="provider-form-title" class="text-xl">{% if editing %}Xodimni tahrirlash{% else %}Yangi xodim{% endif %}</h2>
+        <a href="{% url 'web:dashboard_providers' %}" class="-m-2 flex size-11 items-center justify-center rounded-md text-muted" aria-label="Oynani yopish">{% icon "x" 20 %}</a>
+      </div>
+      {% include "components/form_errors.html" %}
+      {% include "components/field.html" with field=form.name %}
+      {% include "components/field.html" with field=form.bio %}
+      <div class="grid gap-4 sm:grid-cols-[120px_1fr]">
+        <div class="field">
+          <label class="label" for="{{ form.color.id_for_label }}">{{ form.color.label }}</label>
+          {{ form.color }}
+          {% if form.color.errors %}<p class="field-error" role="alert">{{ form.color.errors|first }}</p>{% endif %}
+        </div>
+        {% include "components/field.html" with field=form.timezone %}
+      </div>
+      {% include "components/field.html" with field=form.user %}
+      <fieldset>
+        <legend class="label">{{ form.services.label }}</legend>
+        <div class="mt-2 grid gap-1 sm:grid-cols-2">
+          {% for checkbox in form.services %}
+            <label class="flex min-h-11 items-center gap-3 rounded-md px-2 hover:bg-bg-subtle">{{ checkbox.tag }}<span class="truncate">{{ checkbox.choice_label }}</span></label>
+          {% empty %}
+            <p class="text-sm text-muted">Avval xizmat qoʻshing.</p>
+          {% endfor %}
+        </div>
+        {% if form.services.errors %}<p class="field-error mt-1" role="alert">{{ form.services.errors|first }}</p>{% endif %}
+      </fieldset>
+      <label class="flex min-h-11 items-center gap-3">{{ form.is_active }}<span>{{ form.is_active.label }}</span></label>
+      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <a href="{% url 'web:dashboard_providers' %}" class="btn btn-secondary">Bekor qilish</a>
+        <button type="submit" class="btn btn-primary" x-bind:disabled="busy">{% if editing %}Oʻzgarishlarni saqlash{% else %}Xodimni qoʻshish{% endif %}</button>
+      </div>
+    </form>
+  </dialog>
+{% endif %}
+{% endblock %}

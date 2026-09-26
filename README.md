@@ -11,6 +11,7 @@ To'liq texnik topshiriq: [TASK.md](TASK.md).
 ```powershell
 Copy-Item .env.example .env        # SECRET_KEY ni o'zgartiring
 docker compose up --build          # db + web, http://localhost:8000
+docker compose exec web python manage.py seed_demo
 ```
 
 5432-port band bo'lsa, `.env` da `POSTGRES_PORT` va `DATABASE_URL` dagi portni o'zgartiring (masalan `5434`).
@@ -23,6 +24,7 @@ python -m venv .venv; .\.venv\Scripts\Activate.ps1
 pip install -r requirements/dev.txt
 Copy-Item .env.example .env
 python manage.py migrate
+python manage.py seed_demo
 python manage.py runserver
 ```
 
@@ -33,6 +35,25 @@ Docker'siz: lokal PostgreSQL 14+ ham ishlaydi. Rolga `CREATEDB` huquqi kerak (py
 ```
 
 Keyin `.env` dagi `DATABASE_URL` portini lokal serverniki bilan almashtiring.
+
+## Demo ma'lumot va loginlar
+
+`python manage.py seed_demo` (faqat bo'sh bazaga) "Navbat Barbershop" ni yaratadi: 5 xizmat, 3 xodim haftalik jadvali bilan, 1 dam olish va barcha statusdagi ~25 bron (o'tgan va kelgusi). Barcha bronlar haqiqiy service qatlami orqali yaratiladi — tarixi ham haqiqiy.
+
+| Rol | Email | Parol |
+|---|---|---|
+| Admin | `admin@navbat.uz` | `Navbat-Demo-2026` |
+| Xodim (Sardor) | `sardor@navbat.uz` | `Navbat-Demo-2026` |
+| Mijoz | `mijoz@navbat.uz` | `Navbat-Demo-2026` |
+
+Parolni `DEMO_PASSWORD` yoki `seed_demo --password …` bilan o'zgartirish mumkin. Qayta yaratish: `python manage.py flush --no-input; python manage.py seed_demo`.
+
+## Production
+
+- Bitta image, ikki jarayon: `gunicorn` (web) va `scheduler` (har 5 daqiqada o'tib ketgan `pending` bronlarni `expired` sababi bilan bekor qiladi — TASK 5.3).
+- `/healthz` — DB ping (200 / 503).
+- VPS: `docker compose -f docker-compose.prod.yml --env-file .env.prod --profile caddy up -d --build` (avtomatik HTTPS).
+- Render: [`render.yaml`](render.yaml) Blueprint. Railway va boshqa variantlar: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Testlar va sifat
 

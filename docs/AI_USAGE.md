@@ -321,6 +321,33 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi bosqichlar bo'yicha qur
 
 ## 11-bosqich — Ops
 
+**Prompt (qisqacha):** "davom et" — 11-bosqich (prod Dockerfile/compose, healthz, seed_demo, expire_stale_bookings, CI, deploy qo'llanmasi).
+
+**Generatsiya qilindi:**
+- `/healthz` (DB ping → 200/503), `DisplayTimezoneMiddleware` uni chetlab o'tadi.
+- `bookings.services.expire_stale_bookings` + `manage.py expire_stale_bookings`: har bron lock ostida qayta o'qiladi va faqat hali ham `pending` bo'lsa bekor qilinadi (sabab `expired`, `changed_by=None`, mijozga xat).
+- `manage.py seed_demo`: 5 xizmat, 3 xodim (biri akkauntli), haftalik jadvallar, 1 dam olish, ~23 bron. Hamma bron service orqali; o'tganlari `unittest.mock.patch("django.utils.timezone.now")` bilan "o'sha paytda" yaratilgan — tarix vaqtlari ham ishonarli. Xatlar seed paytida o'chirilgan; bo'sh bo'lmagan bazada rad etadi.
+- Tizim sabablari (`expired`, `auto_confirm`) UI va xatlarda odam tilida (`reason_text`).
+- `docker/entrypoint.sh` rejimlari: `gunicorn` (migrate + collectstatic), `runserver`, `scheduler` (`while true; sleep & wait` + SIGTERM trap). `HEALTHCHECK`. `docker-compose.prod.yml` (db, web, scheduler, `--profile caddy`), `docker/Caddyfile`, `.env.prod.example`, `render.yaml`, `docs/DEPLOY.md`.
+- Prod sozlamalari: `/healthz` SSL redirect'dan ozod, `localhost` + Render/Railway hostnomi avtomatik `ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS`/`SITE_URL` ga, `NUM_PROXIES=1`, HSTS preload ataylab o'chirilgan (sababi izohda).
+- CI: `check --deploy --fail-level WARNING`, toza bazada `seed_demo`, yangi `compose-smoke` job (prod stekni ko'tarib `/healthz`, 301, hash'langan CSS, seed, scheduler logini tekshiradi).
+- Testlar: `tests/test_ops.py` (10).
+
+**Qanday tekshirildi:**
+- `pytest` (to'liq ro'yxat quyida hisobotda); `manage.py check --deploy` prod sozlamalari bilan — 0 muammo (1 ta izohli silenced).
+- `seed_demo` dev bazada ishga tushirildi: 23 bron (pending 6, confirmed 4, cancelled 3, completed 10); qayta ishga tushirish rad etildi.
+- Prod `collectstatic` (`CompressedManifestStaticFilesStorage`) lokal ishga tushirildi va test sifatida qo'shildi.
+- **Tekshirilmagan:** Docker image build va `docker compose` — mashinada Docker yo'q. CI `compose-smoke` job'i birinchi push'da tekshiradi.
+
+**AI xatolari (hammasi deploydan oldin topildi):**
+- **Prod konteyner ishga tushmas edi:** Tailwind manbasi (`static/src/app.css`, `@import "tailwindcss"`) `STATICFILES_DIRS` ichida edi — manifest `collectstatic` uni hal qila olmay yiqiladi, entrypoint `set -e` bilan to'xtaydi → crash loop. Prod `collectstatic` ni lokal ishga tushirish bilan topildi; manba `assets/css/` ga ko'chirildi + regressiya testi.
+- **`/healthz` DB o'chganda 503 emas, 500 berardi:** middleware har sahifada `BusinessSettings` ni o'qirdi. Test topdi; middleware `/healthz` ni chetlab o'tadi.
+- **CSS build skripti xatoni yashirardi:** manba yo'li o'zgargach Tailwind yiqildi, lekin skript "rebuilt" deb bo'sh `app.css` qoldirdi (`cmd >` faylni oldindan yaratadi). Endi vaqtinchalik faylga yoziladi va faqat muvaffaqiyatda almashtiriladi; ataylab buzib sinaldi.
+- Python orqali PowerShell faylini tahrirlashda `css\app` dagi `\a` "bell" belgisiga aylandi (`csspp.css`) — yangi himoya build'ni to'xtatdi, fayl Write bilan qayta yozildi.
+- `seed_demo` hisoboti Windows konsolida (cp1252) `ʼ` ni chiqara olmay yiqildi — buyruq chiqishi ASCII inglizchaga o'tkazildi (ma'lumotning o'zi o'zbekcha).
+- `.gitignore` dagi `.env.*` `.env.prod.example` ni ham yashirardi — istisno qo'shildi.
+- Birinchi yozilgan `HEALTHCHECK` ichma-ich qochirilgan qo'shtirnoqlar bilan mo'rt edi — exec shakliga soddalashtirildi.
+
 ## 12-bosqich — Hujjat va yakun
 
 ## Nimani o'zim yozdim / o'zgartirdim

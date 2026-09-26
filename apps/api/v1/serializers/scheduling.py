@@ -80,3 +80,9 @@ class SettingsAdminSerializer(serializers.ModelSerializer):
         model = BusinessSettings
         fields = [*SettingsPublicSerializer.Meta.fields, "auto_confirm", "updated_at"]
         read_only_fields = ["updated_at"]
+
+
+class AvailabilityResponseSerializer(serializers.Serializer):
+    provider_id = serializers.UUIDField(source="provider.pk")
+    timezone = serializers.CharField(help_text="Qoidalar shu zonada talqin qilinadi.")
+    rules = RuleSerializer(many=True)

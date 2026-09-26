@@ -1,11 +1,16 @@
-from zoneinfo import ZoneInfo
-
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.api.v1.serializers.availability import DaysQuerySerializer, SlotsQuerySerializer
+from apps.api.schema import problems
+from apps.api.v1.serializers.availability import (
+    DaysQuerySerializer,
+    DaysResponseSerializer,
+    SlotsQuerySerializer,
+    SlotsResponseSerializer,
+)
 from apps.scheduling import selectors
 from apps.scheduling.models import BusinessSettings
 
@@ -20,22 +25,21 @@ def resolve_tz(request, explicit: str | None) -> str:
     return BusinessSettings.load().timezone
 
 
-def _service_ref(service):
-    return {
-        "id": str(service.pk),
-        "name": service.name,
-        "duration_minutes": service.duration_minutes,
-        "price": f"{service.price:.2f}",
-    }
-
-
-def _utc_z(moment) -> str:
-    return moment.isoformat().replace("+00:00", "Z")
+PAIR_ERRORS = problems(
+    s404="NOT_FOUND (xizmat yoki xodim)",
+    s422="VALIDATION_ERROR, INACTIVE_RESOURCE, PROVIDER_NOT_OFFERING_SERVICE",
+)
 
 
 class SlotsView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        tags=["availability"],
+        summary="Bir kunning boʻsh slotlari",
+        parameters=[SlotsQuerySerializer],
+        responses={200: SlotsResponseSerializer, **PAIR_ERRORS},
+    )
     def get(self, request):
         query = SlotsQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
@@ -51,29 +55,29 @@ class SlotsView(APIView):
             tz=tz,
             now=timezone.now(),
         )
-        zone = ZoneInfo(tz)
-        return Response(
-            {
-                "date": params["date"].isoformat(),
-                "timezone": tz,
-                "service": _service_ref(service),
-                "provider": {"id": str(provider.pk), "name": provider.name},
-                "slots": [
-                    {
-                        "start_at": _utc_z(s.start_at),
-                        "end_at": _utc_z(s.end_at),
-                        "start_local": s.start_at.astimezone(zone).strftime("%H:%M"),
-                        "end_local": s.end_at.astimezone(zone).strftime("%H:%M"),
-                    }
-                    for s in slots
-                ],
-            }
-        )
+        data = {
+            "date": params["date"],
+            "timezone": tz,
+            "service": service,
+            "provider": provider,
+            "slots": slots,
+        }
+        return Response(SlotsResponseSerializer(data, context={"tz": tz}).data)
 
 
 class DaysView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        tags=["availability"],
+        summary="Kunlar boʻyicha boʻsh slotlar soni (sana chizigʻi uchun)",
+        parameters=[DaysQuerySerializer],
+        responses={
+            200: DaysResponseSerializer,
+            **problems(s400="RANGE_TOO_LARGE (31 kundan koʻp)"),
+            **PAIR_ERRORS,
+        },
+    )
     def get(self, request):
         query = DaysQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
@@ -90,13 +94,12 @@ class DaysView(APIView):
             tz=tz,
             now=timezone.now(),
         )
-        return Response(
-            {
-                "from": params["from"].isoformat(),
-                "to": params["to"].isoformat(),
-                "timezone": tz,
-                "service": _service_ref(service),
-                "provider": {"id": str(provider.pk), "name": provider.name},
-                "days": [{"date": d.isoformat(), "available": n} for d, n in summary],
-            }
-        )
+        data = {
+            "date_from": params["from"],
+            "date_to": params["to"],
+            "timezone": tz,
+            "service": service,
+            "provider": provider,
+            "days": [{"date": d, "available": n} for d, n in summary],
+        }
+        return Response(DaysResponseSerializer(data).data)

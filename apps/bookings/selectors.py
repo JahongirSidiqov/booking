@@ -57,3 +57,29 @@ def can_view(user: User, booking: Booking) -> bool:
 
 def visible_booking(user: User, pk) -> Booking | None:
     return visible_bookings(user).prefetch_related("history__changed_by").filter(pk=pk).first()
+
+
+def filter_bookings(
+    qs: QuerySet[Booking],
+    *,
+    statuses: list[str] | None = None,
+    provider_id=None,
+    service_id=None,
+    starts_from: datetime | None = None,
+    starts_before: datetime | None = None,
+    upcoming_after: datetime | None = None,
+) -> QuerySet[Booking]:
+    if statuses:
+        qs = qs.filter(status__in=statuses)
+    if provider_id:
+        qs = qs.filter(provider_id=provider_id)
+    if service_id:
+        qs = qs.filter(service_id=service_id)
+    if starts_from:
+        qs = qs.filter(start_at__gte=starts_from)
+    if starts_before:
+        qs = qs.filter(start_at__lt=starts_before)
+    if upcoming_after:
+        # Upcoming = not finished yet, soonest first; history views read newest first.
+        return qs.filter(end_at__gt=upcoming_after).order_by("start_at", "id")
+    return qs.order_by("-start_at", "id")

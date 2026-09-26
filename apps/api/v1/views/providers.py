@@ -1,12 +1,15 @@
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
 from apps.api.permissions import IsAdmin, IsAdminOrReadOnly, IsProviderOwnerOrAdmin, is_admin
+from apps.api.schema import TIME_OFF_PATH, UUID_PATH, problems
 from apps.api.utils import flag_query_param, uuid_or_404, uuid_query_param
-from apps.api.v1.serializers.bookings import deactivation_payload
+from apps.api.v1.serializers.bookings import DeactivationSerializer, deactivation_payload
 from apps.api.v1.serializers.providers import (
     ProviderAdminSerializer,
     ProviderSerializer,
@@ -14,7 +17,7 @@ from apps.api.v1.serializers.providers import (
 )
 from apps.api.v1.serializers.scheduling import (
     AvailabilityInputSerializer,
-    RuleSerializer,
+    AvailabilityResponseSerializer,
     TimeOffSerializer,
 )
 from apps.bookings import selectors as booking_selectors
@@ -23,7 +26,57 @@ from apps.scheduling import selectors as scheduling_selectors
 from apps.scheduling import services as scheduling_services
 from apps.scheduling.models import BusinessSettings
 
+ADMIN_ONLY = problems(s401="AUTH_REQUIRED", s403="FORBIDDEN")
+MANAGE = problems(
+    s401="AUTH_REQUIRED",
+    s403="FORBIDDEN (faqat admin yoki shu xodimning oʻzi)",
+    s404="NOT_FOUND",
+)
+CONFLICT = problems(s409="CONFLICTS_WITH_BOOKINGS (javobda `bookings` roʻyxati)")
 
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="Faol xodimlar",
+        description="Admin uchun javobda qoʻshimcha `is_active`, `user_id`, `timezone`.",
+        parameters=[
+            OpenApiParameter("service", OpenApiTypes.UUID, description="Shu xizmatni koʻrsatadi."),
+            OpenApiParameter("include_inactive", OpenApiTypes.BOOL, description="Faqat admin."),
+        ],
+        responses={200: ProviderSerializer(many=True), **problems(s422="VALIDATION_ERROR")},
+    ),
+    retrieve=extend_schema(
+        summary="Xodim",
+        parameters=[UUID_PATH],
+        responses={200: ProviderSerializer, **problems(s404="NOT_FOUND")},
+    ),
+    create=extend_schema(
+        summary="Xodim yaratish (admin)",
+        request=ProviderAdminSerializer,
+        responses={
+            201: ProviderAdminSerializer,
+            **problems(s422="VALIDATION_ERROR"),
+            **ADMIN_ONLY,
+        },
+    ),
+    partial_update=extend_schema(
+        summary="Xodimni tahrirlash (admin)",
+        parameters=[UUID_PATH],
+        request=ProviderAdminSerializer,
+        responses={
+            200: ProviderAdminSerializer,
+            **problems(s404="NOT_FOUND", s422="VALIDATION_ERROR"),
+            **ADMIN_ONLY,
+        },
+    ),
+    destroy=extend_schema(
+        summary="Xodimni deaktivatsiya qilish (admin)",
+        description="`is_active=false`; kelgusi bronlar saqlanadi va roʻyxat sifatida qaytadi.",
+        parameters=[UUID_PATH],
+        responses={200: DeactivationSerializer, **problems(s404="NOT_FOUND"), **ADMIN_ONLY},
+    ),
+)
+@extend_schema(tags=["providers"])
 class ProviderViewSet(viewsets.ViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
@@ -74,6 +127,16 @@ class ProviderViewSet(viewsets.ViewSet):
         upcoming = list(booking_selectors.upcoming_active(now=timezone.now(), provider=provider))
         return Response(deactivation_payload(provider, upcoming))
 
+    @extend_schema(
+        summary="Xodim xizmatlarini butunlay almashtirish (admin)",
+        parameters=[UUID_PATH],
+        request=ProviderServicesSerializer,
+        responses={
+            200: ProviderAdminSerializer,
+            **problems(s404="NOT_FOUND", s422="VALIDATION_ERROR"),
+            **ADMIN_ONLY,
+        },
+    )
     @action(detail=True, methods=["put"], url_path="services", permission_classes=[IsAdmin])
     def replace_services(self, request, pk=None):
         provider = self._get(pk, include_inactive=True)
@@ -93,17 +156,33 @@ class ProviderViewSet(viewsets.ViewSet):
         return provider
 
     def _availability_response(self, provider):
-        rules = scheduling_selectors.availability_rules(provider=provider)
-        return Response(
-            {
-                "provider_id": str(provider.pk),
-                "timezone": scheduling_selectors.provider_timezone(
-                    provider, BusinessSettings.load()
-                ),
-                "rules": RuleSerializer(rules, many=True).data,
-            }
-        )
+        data = {
+            "provider": provider,
+            "timezone": scheduling_selectors.provider_timezone(provider, BusinessSettings.load()),
+            "rules": scheduling_selectors.availability_rules(provider=provider),
+        }
+        return Response(AvailabilityResponseSerializer(data).data)
 
+    @extend_schema(
+        methods=["GET"],
+        summary="Haftalik ish vaqti",
+        parameters=[UUID_PATH],
+        responses={200: AvailabilityResponseSerializer, **MANAGE},
+    )
+    @extend_schema(
+        methods=["PUT"],
+        summary="Haftalik ish vaqtini butunlay almashtirish",
+        description="Bir kunda oraliqlar kesishmasin; yarim tundan oʻtuvchi smena yoʻq (ADR-004). "
+        "Yangi jadvaldan tashqarida qoladigan faol bron boʻlsa — 409 (ADR-005).",
+        parameters=[UUID_PATH],
+        request=AvailabilityInputSerializer,
+        responses={
+            200: AvailabilityResponseSerializer,
+            **problems(s422="VALIDATION_ERROR"),
+            **CONFLICT,
+            **MANAGE,
+        },
+    )
     @action(
         detail=True,
         methods=["get", "put"],
@@ -120,6 +199,28 @@ class ProviderViewSet(viewsets.ViewSet):
             )
         return self._availability_response(provider)
 
+    @extend_schema(
+        methods=["GET"],
+        summary="Dam olish / taʼtil roʻyxati",
+        parameters=[
+            UUID_PATH,
+            OpenApiParameter("include_past", OpenApiTypes.BOOL, description="Oʻtganlarini ham."),
+        ],
+        responses={200: TimeOffSerializer(many=True), **MANAGE},
+    )
+    @extend_schema(
+        methods=["POST"],
+        summary="Dam olish qoʻshish",
+        description="Faol bron bilan kesishsa — 409 va bronlar roʻyxati (ADR-005).",
+        parameters=[UUID_PATH],
+        request=TimeOffSerializer,
+        responses={
+            201: TimeOffSerializer,
+            **problems(s422="VALIDATION_ERROR"),
+            **CONFLICT,
+            **MANAGE,
+        },
+    )
     @action(
         detail=True,
         methods=["get", "post"],
@@ -140,6 +241,11 @@ class ProviderViewSet(viewsets.ViewSet):
         )
         return Response(TimeOffSerializer(items, many=True).data)
 
+    @extend_schema(
+        summary="Dam olishni oʻchirish",
+        parameters=[UUID_PATH, TIME_OFF_PATH],
+        responses={204: None, **MANAGE},
+    )
     @action(
         detail=True,
         methods=["delete"],

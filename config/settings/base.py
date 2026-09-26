@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "django.contrib.postgres",
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
+    "drf_spectacular",
     "apps.common",
     "apps.accounts",
     "apps.catalog",
@@ -124,6 +125,25 @@ REST_FRAMEWORK = {
     },
     "NUM_PROXIES": env.int("NUM_PROXIES", default=None),
     "EXCEPTION_HANDLER": "apps.common.exceptions.problem_exception_handler",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Navbat API",
+    "DESCRIPTION": (
+        "Onlayn navbat va bron tizimi API'si. Autentifikatsiya: `Authorization: Bearer <access>` "
+        "(`POST /api/v1/auth/token`). Barcha vaqtlar ISO 8601; kirishda offset majburiy, "
+        "chiqishda UTC (`Z`). Xatolar RFC 9457 uslubida: `type`, `title`, `status`, `code`, "
+        "`detail`, faqat 422 da `errors`."
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX": r"/api/v1",
+    "ENUM_NAME_OVERRIDES": {
+        "BookingStatusEnum": "apps.bookings.models.Booking.Status",
+        "UserRoleEnum": "apps.accounts.models.User.Role",
+    },
 }
 
 SIMPLE_JWT = {

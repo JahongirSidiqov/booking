@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Sahifa topilmadi{% endblock %}
+{% block main_class %}container-narrow py-16{% endblock %}
+{% block content %}
+{% url 'web:home' as home_url %}
+{% include "components/empty_state.html" with icon_name="circle-alert" title="Sahifa topilmadi" body="Havola eskirgan yoki notoʻgʻri boʻlishi mumkin." action_url=home_url action_label="Xizmatlarga qaytish" %}
+{% endblock %}

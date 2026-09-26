@@ -1,0 +1,73 @@
+{% load static navbat %}<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}{{ business.name }}{% endblock %} · Navbat</title>
+  <meta name="description" content="{{ business.name }} — onlayn navbat va bron.">
+  <link rel="preload" href="{% static 'fonts/inter-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/htmx.min.js' %}" defer></script>
+  <script src="{% static 'js/alpine.min.js' %}" defer></script>
+</head>
+<body class="min-h-dvh" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 btn btn-secondary">Asosiy mazmunga oʻtish</a>
+
+  <header class="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur">
+    <nav class="container-page flex h-14 items-center justify-between gap-3 md:h-16" aria-label="Asosiy menyu">
+      <a href="{% url 'web:home' %}" class="flex items-center gap-2 font-semibold text-text">
+        <span class="flex size-8 items-center justify-center rounded-md bg-primary text-white">{% icon "calendar-check" 18 %}</span>
+        <span class="truncate">{{ business.name }}</span>
+      </a>
+      <div class="flex items-center gap-1">
+        {% url 'web:home' as home_url %}
+        {% url 'web:bookings' as bookings_url %}
+        <a href="{{ home_url }}" class="btn btn-ghost btn-sm hidden sm:inline-flex" {% if request.path == home_url %}aria-current="page"{% endif %}>Xizmatlar</a>
+        {% if user.is_authenticated %}
+          <a href="{{ bookings_url }}" class="btn btn-ghost btn-sm" {% if request.path == bookings_url %}aria-current="page"{% endif %}>Bronlarim</a>
+          <a href="{% url 'web:profile' %}" class="flex size-11 items-center justify-center rounded-full" aria-label="Profil: {{ user.full_name }}">
+            <span class="flex size-9 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary">{{ user.full_name|initials }}</span>
+          </a>
+        {% else %}
+          <a href="{% url 'web:login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-secondary btn-sm">{% icon "log-in" 16 %}Kirish</a>
+        {% endif %}
+      </div>
+    </nav>
+  </header>
+
+  {# Shown only when the device timezone differs from the one dates are rendered in (TASK 5.4). #}
+  <div x-data="{ browser: Intl.DateTimeFormat().resolvedOptions().timeZone }"
+       x-show="browser && browser !== '{{ display_tz|escapejs }}'" x-cloak
+       class="border-b border-warning/30 bg-warning-soft">
+    <p class="container-page flex items-start gap-2 py-2 text-sm text-text">
+      {% icon "info" 16 "mt-0.5 text-warning" %}
+      <span>Vaqtlar <strong>{{ display_tz }}</strong> boʻyicha koʻrsatilmoqda, qurilmangiz esa <strong x-text="browser"></strong> zonasida.
+        {% if user.is_authenticated %}<a class="font-medium text-primary underline" href="{% url 'web:profile' %}">Zonani oʻzgartirish</a>{% endif %}
+      </span>
+    </p>
+  </div>
+
+  <div class="pointer-events-none fixed inset-x-0 top-16 z-40 flex flex-col items-center gap-2 px-4 md:top-20 md:right-6 md:left-auto md:w-96" aria-live="polite" role="status">
+    {% for message in messages %}
+      <div class="toast {% if message.level_tag == 'error' %}border-danger/30{% else %}border-success/30{% endif %}"
+           x-data="{ open: true }" x-show="open" x-transition.opacity
+           {% if message.level_tag != 'error' %}x-init="setTimeout(() => open = false, 5000)"{% endif %}>
+        {% if message.level_tag == 'error' %}{% icon "circle-alert" 20 "text-danger" %}{% else %}{% icon "circle-check" 20 "text-success" %}{% endif %}
+        <p class="flex-1 text-sm">{{ message }}</p>
+        <button type="button" class="-m-2 flex size-9 items-center justify-center rounded-md text-muted" @click="open = false" aria-label="Xabarni yopish">{% icon "x" 16 %}</button>
+      </div>
+    {% endfor %}
+  </div>
+
+  <main id="main" class="{% block main_class %}container-page py-6 md:py-10{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="mt-auto border-t border-border bg-surface">
+    <div class="container-page flex flex-col gap-1 py-6 text-sm text-muted sm:flex-row sm:justify-between">
+      <span>{{ business.name }}</span>
+      <span>Vaqt zonasi: {{ display_tz }}</span>
+    </div>
+  </footer>
+</body>
+</html>

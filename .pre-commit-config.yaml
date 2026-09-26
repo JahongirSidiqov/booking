@@ -1,3 +1,5 @@
+# Vendored (htmx, Alpine, fonts, Lucide) and generated (Tailwind) files stay byte-for-byte.
+exclude: ^(static/(js|css|fonts)/|templates/icons/)
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.9

@@ -1,0 +1,12 @@
+{% load navbat %}<ol class="flex items-center gap-2 text-sm" aria-label="Bron qadamlari">
+  {% for number, label in steps %}
+    <li class="flex items-center gap-2 {% if number < step %}text-success{% elif number == step %}font-semibold text-primary{% else %}text-subtle{% endif %}"
+        {% if number == step %}aria-current="step"{% endif %}>
+      <span class="flex size-6 items-center justify-center rounded-full border {% if number < step %}border-success bg-success-soft{% elif number == step %}border-primary bg-primary text-white{% else %}border-border-strong{% endif %}">
+        {% if number < step %}{% icon "check" 14 %}{% else %}<span class="text-xs tabular-nums">{{ number }}</span>{% endif %}
+      </span>
+      <span>{{ label }}</span>
+    </li>
+    {% if not forloop.last %}<li aria-hidden="true" class="h-px w-4 bg-border-strong sm:w-8"></li>{% endif %}
+  {% endfor %}
+</ol>

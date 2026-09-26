@@ -1,0 +1,6 @@
+{% load navbat %}<div class="card flex flex-col items-center gap-3 px-6 py-10 text-center">
+  <span class="flex size-12 items-center justify-center rounded-full bg-bg-subtle text-muted">{% icon icon_name 24 %}</span>
+  <h2 class="text-lg">{{ title }}</h2>
+  {% if body %}<p class="max-w-[42ch] text-muted">{{ body }}</p>{% endif %}
+  {% if action_url %}<a class="btn btn-primary mt-2" href="{{ action_url }}">{{ action_label }}</a>{% endif %}
+</div>

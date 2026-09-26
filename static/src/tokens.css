@@ -1,0 +1,53 @@
+/* Design tokens (TASK 10.2). Tailwind v4 turns every @theme variable into a CSS custom
+   property on :root *and* into utilities (bg-primary, text-muted, rounded-md, shadow-sm…),
+   so this file is the single place colours, radii, shadows and motion are defined.
+   Dark mode is not shipped in v1; it will only need a second value set here. */
+
+@theme {
+  --color-*: initial;
+
+  --color-white: #ffffff;
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+
+  --color-text: #0f172a;
+  --color-muted: #64748b;
+  --color-subtle: #94a3b8;
+
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-soft: #eff6ff;
+
+  --color-success: #16a34a;
+  --color-success-soft: #f0fdf4;
+  --color-warning: #d97706;
+  --color-warning-soft: #fffbeb;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fef2f2;
+
+  --color-focus-ring: #2563eb;
+  --color-overlay: rgb(15 23 42 / 0.5);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.06);
+  --shadow-md: 0 2px 4px rgb(0 0 0 / 0.04), 0 4px 12px rgb(0 0 0 / 0.08);
+  --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.05);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root {
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+}

@@ -1,0 +1,5 @@
+{% load navbat %}{% if form.non_field_errors %}
+  <div class="flex items-start gap-2 rounded-md border border-danger/30 bg-danger-soft p-3 text-sm text-danger" role="alert">
+    {% icon "circle-alert" 18 "mt-0.5" %}<span>{{ form.non_field_errors|first }}</span>
+  </div>
+{% endif %}

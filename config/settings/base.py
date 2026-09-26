@@ -29,9 +29,12 @@ INSTALLED_APPS = [
     "apps.providers",
     "apps.scheduling",
     "apps.bookings",
+    "apps.web",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
+LOGIN_URL = "web:login"
+LOGIN_REDIRECT_URL = "web:home"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -41,6 +44,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "apps.web.middleware.DisplayTimezoneMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -58,6 +62,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.web.context_processors.site",
             ],
         },
     },

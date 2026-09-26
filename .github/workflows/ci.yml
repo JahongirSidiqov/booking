@@ -18,6 +18,14 @@ jobs:
       - run: pip install -r requirements/dev.txt
       - run: ruff check .
       - run: ruff format --check .
+      - name: Committed CSS matches the templates
+        run: |
+          curl -sSfL -o /usr/local/bin/tailwindcss \
+            https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.3/tailwindcss-linux-x64
+          chmod +x /usr/local/bin/tailwindcss
+          tailwindcss -i static/src/app.css -o /tmp/app.css --minify
+          diff -q static/css/app.css /tmp/app.css || {
+            echo "static/css/app.css is stale: run scripts/build-css.ps1 and commit it"; exit 1; }
 
   test:
     runs-on: ubuntu-latest

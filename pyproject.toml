@@ -1,0 +1,27 @@
+[project]
+name = "navbat"
+version = "0.1.0"
+description = "Navbat — appointment booking system for small service businesses"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["staticfiles", "**/migrations/*.py", "*.md"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "DJ", "SIM", "RUF"]
+ignore = ["RUF012"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config", "tests"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers --no-migrations"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["apps"]
+omit = ["*/migrations/*", "*/apps.py"]

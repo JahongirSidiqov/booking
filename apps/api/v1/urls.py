@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework.routers import SimpleRouter
 
-from apps.api.v1.views import accounts, catalog, providers, scheduling
+from apps.api.v1.views import accounts, availability, catalog, providers, scheduling
 
 app_name = "v1"
 
@@ -16,5 +16,7 @@ urlpatterns = [
     path("auth/logout", accounts.LogoutView.as_view(), name="auth-logout"),
     path("me", accounts.MeView.as_view(), name="me"),
     path("settings", scheduling.SettingsView.as_view(), name="settings"),
+    path("availability/slots", availability.SlotsView.as_view(), name="availability-slots"),
+    path("availability/days", availability.DaysView.as_view(), name="availability-days"),
     *router.urls,
 ]

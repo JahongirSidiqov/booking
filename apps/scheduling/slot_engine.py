@@ -192,6 +192,50 @@ def get_available_slots(
     return sorted(set(slots))
 
 
+def slot_rejection(
+    *,
+    service: ServiceLike,
+    provider: ProviderLike,
+    start_at: datetime,
+    now: datetime,
+    settings: SettingsLike,
+    rules: Iterable[RuleLike],
+    time_offs: Iterable[Interval] = (),
+    busy_ranges: Iterable[Interval] = (),
+) -> str | None:
+    """Why `start_at` cannot be booked, as an error code — or None if it can.
+
+    The verdict comes from get_available_slots itself (the same function that renders the
+    picker); the cheaper checks before it only decide *which* error code to report.
+    """
+    if start_at <= now:
+        return "IN_PAST"
+    if start_at < now + timedelta(minutes=settings.min_lead_time_minutes):
+        return "LEAD_TIME"
+    if start_at > now + timedelta(days=settings.max_advance_days):
+        return "TOO_FAR_AHEAD"
+    provider_zone = _provider_zone(provider, settings)
+    if align_to_step(start_at, provider_zone, settings.slot_step_minutes) != start_at:
+        return "STEP_MISALIGNED"
+
+    wanted = Slot(start_at, start_at + timedelta(minutes=service.duration_minutes))
+    common = {
+        "service": service,
+        "provider": provider,
+        "date_local": start_at.astimezone(provider_zone).date(),
+        "now": now,
+        "settings": settings,
+        "rules": list(rules),
+        "time_offs": list(time_offs),
+        "tz": provider_zone,
+    }
+    if wanted not in get_available_slots(**common):
+        return "SLOT_UNAVAILABLE"
+    if wanted not in get_available_slots(**common, busy_ranges=busy_ranges):
+        return "SLOT_TAKEN"
+    return None
+
+
 def validate_range(date_from: date, date_to: date) -> None:
     if date_to < date_from:
         raise DomainError(

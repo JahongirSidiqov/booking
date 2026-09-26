@@ -13,6 +13,7 @@ from apps.scheduling.slot_engine import (
     get_day_summary,
     local_day_bounds,
     merge,
+    slot_rejection,
     subtract,
 )
 
@@ -323,3 +324,51 @@ def test_align_in_repeated_hour_after_dst_end_does_not_go_backwards():
     # New York falls back on 2026-11-01: 01:30 happens twice; 06:30Z is the second one (EST).
     second_0130 = utc(2026, 11, 1, 6, 30)
     assert align_to_step(second_0130, "America/New_York", 30) == second_0130
+
+
+# --- slot_rejection (used by create_booking) ------------------------------------------------
+
+
+def reject(start_at, *, now=NOW, busy=(), time_offs=(), rules=WORKDAY, duration=30):
+    return slot_rejection(
+        service=SimpleNamespace(duration_minutes=duration),
+        provider=SimpleNamespace(timezone=None),
+        start_at=start_at,
+        now=now,
+        settings=make_settings(),
+        rules=rules,
+        time_offs=time_offs,
+        busy_ranges=busy,
+    )
+
+
+@pytest.mark.parametrize(
+    ("start_at", "now", "expected"),
+    [
+        (tashkent(9), NOW, None),
+        (utc(2026, 9, 26, 12), NOW, "IN_PAST"),
+        (utc(2026, 9, 26, 11), NOW, "IN_PAST"),
+        (tashkent(9, 30), tashkent(9), "LEAD_TIME"),
+        (tashkent(9, day=date(2026, 10, 29)), NOW, "TOO_FAR_AHEAD"),
+        (tashkent(10, 7), NOW, "STEP_MISALIGNED"),
+        (tashkent(17, 45), NOW, "SLOT_UNAVAILABLE"),
+        (tashkent(9, day=date(2026, 10, 2)), NOW, "SLOT_UNAVAILABLE"),
+    ],
+)
+def test_slot_rejection_reasons(start_at, now, expected):
+    assert reject(start_at, now=now) == expected
+
+
+def test_slot_rejection_distinguishes_time_off_from_taken():
+    assert reject(tashkent(9), time_offs=[(tashkent(9), tashkent(10))]) == "SLOT_UNAVAILABLE"
+    assert reject(tashkent(9), busy=[(tashkent(9), tashkent(9, 30))]) == "SLOT_TAKEN"
+    assert reject(tashkent(9, 30), busy=[(tashkent(9), tashkent(9, 30))]) is None
+
+
+def test_slot_rejection_agrees_with_listing_for_every_candidate():
+    """Every listed slot is bookable and every bookable grid point is listed."""
+    busy = [(tashkent(11), tashkent(11, 45))]
+    listed = {s.start_at for s in slots_for(rules=WORKDAY, busy=busy)}
+    grid = [tashkent(8) + timedelta(minutes=15 * i) for i in range(48)]
+    bookable = {t for t in grid if reject(t, busy=busy) is None}
+    assert bookable == listed

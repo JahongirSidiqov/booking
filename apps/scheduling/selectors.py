@@ -2,6 +2,7 @@ from datetime import UTC, date, datetime, time, timedelta
 
 from django.db.models import QuerySet
 
+from apps.bookings import selectors as booking_selectors
 from apps.catalog.models import Service
 from apps.common.exceptions import DomainError
 from apps.providers.models import Provider, ProviderService
@@ -63,13 +64,15 @@ def _query_window(date_from: date, date_to: date) -> tuple[datetime, datetime]:
     return start, end
 
 
-def _engine_inputs(provider: Provider, date_from: date, date_to: date) -> dict:
+def engine_inputs(provider: Provider, date_from: date, date_to: date) -> dict:
+    """Everything the slot engine needs about one provider for a range of dates."""
     business = BusinessSettings.load()
     start, end = _query_window(date_from, date_to)
     return {
         "settings": business,
         "rules": list(availability_rules(provider=provider)),
         "time_offs": time_off_ranges(provider=provider, start=start, end=end),
+        "busy_ranges": booking_selectors.busy_ranges(provider=provider, start=start, end=end),
     }
 
 
@@ -82,7 +85,7 @@ def day_slots(
         date_local=date_local,
         now=now,
         tz=tz,
-        **_engine_inputs(provider, date_local, date_local),
+        **engine_inputs(provider, date_local, date_local),
     )
 
 
@@ -97,5 +100,5 @@ def days_summary(
         date_to=date_to,
         now=now,
         tz=tz,
-        **_engine_inputs(provider, date_from, date_to),
+        **engine_inputs(provider, date_from, date_to),
     )

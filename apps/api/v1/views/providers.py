@@ -1,16 +1,25 @@
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
-from apps.api.permissions import IsAdmin, IsAdminOrReadOnly, is_admin
+from apps.api.permissions import IsAdmin, IsAdminOrReadOnly, IsProviderOwnerOrAdmin, is_admin
 from apps.api.utils import flag_query_param, uuid_or_404, uuid_query_param
 from apps.api.v1.serializers.providers import (
     ProviderAdminSerializer,
     ProviderSerializer,
     ProviderServicesSerializer,
 )
+from apps.api.v1.serializers.scheduling import (
+    AvailabilityInputSerializer,
+    RuleSerializer,
+    TimeOffSerializer,
+)
 from apps.providers import selectors, services
+from apps.scheduling import selectors as scheduling_selectors
+from apps.scheduling import services as scheduling_services
+from apps.scheduling.models import BusinessSettings
 
 
 class ProviderViewSet(viewsets.ViewSet):
@@ -72,3 +81,69 @@ class ProviderViewSet(viewsets.ViewSet):
         )
         provider = self._get(pk, include_inactive=True)
         return Response(ProviderAdminSerializer(provider).data)
+
+    # --- schedule management (admin, or the provider's own linked user) --------------------
+
+    def _managed(self, request, pk):
+        provider = self._get(pk, include_inactive=True)
+        self.check_object_permissions(request, provider)
+        return provider
+
+    def _availability_response(self, provider):
+        rules = scheduling_selectors.availability_rules(provider=provider)
+        return Response(
+            {
+                "provider_id": str(provider.pk),
+                "timezone": scheduling_selectors.provider_timezone(
+                    provider, BusinessSettings.load()
+                ),
+                "rules": RuleSerializer(rules, many=True).data,
+            }
+        )
+
+    @action(
+        detail=True,
+        methods=["get", "put"],
+        url_path="availability",
+        permission_classes=[IsProviderOwnerOrAdmin],
+    )
+    def availability(self, request, pk=None):
+        provider = self._managed(request, pk)
+        if request.method == "PUT":
+            serializer = AvailabilityInputSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            scheduling_services.replace_availability(
+                provider=provider, rules=serializer.validated_data["rules"]
+            )
+        return self._availability_response(provider)
+
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="time-off",
+        permission_classes=[IsProviderOwnerOrAdmin],
+    )
+    def time_off(self, request, pk=None):
+        provider = self._managed(request, pk)
+        if request.method == "POST":
+            serializer = TimeOffSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            item = scheduling_services.add_time_off(provider=provider, **serializer.validated_data)
+            return Response(TimeOffSerializer(item).data, status=status.HTTP_201_CREATED)
+        items = scheduling_selectors.time_off_list(
+            provider=provider,
+            now=timezone.now(),
+            include_past=flag_query_param(request, "include_past"),
+        )
+        return Response(TimeOffSerializer(items, many=True).data)
+
+    @action(
+        detail=True,
+        methods=["delete"],
+        url_path=r"time-off/(?P<time_off_id>[^/.]+)",
+        permission_classes=[IsProviderOwnerOrAdmin],
+    )
+    def time_off_detail(self, request, pk=None, time_off_id=None):
+        provider = self._managed(request, pk)
+        scheduling_services.delete_time_off(provider=provider, time_off_id=uuid_or_404(time_off_id))
+        return Response(status=status.HTTP_204_NO_CONTENT)

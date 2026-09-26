@@ -3,7 +3,7 @@ from django.core.cache import cache
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
-from tests.factories import DEFAULT_PASSWORD, UserFactory
+from tests.factories import DEFAULT_PASSWORD, ProviderFactory, UserFactory
 
 
 @pytest.fixture(autouse=True)
@@ -55,4 +55,21 @@ def admin_client(api_client, admin_user):
 def customer_client(api_client, customer):
     api_client.force_authenticate(customer)
     api_client.user = customer
+    return api_client
+
+
+@pytest.fixture
+def provider_user(db):
+    return UserFactory(role=User.Role.PROVIDER)
+
+
+@pytest.fixture
+def own_provider(provider_user):
+    return ProviderFactory(user=provider_user)
+
+
+@pytest.fixture
+def provider_client(api_client, provider_user):
+    api_client.force_authenticate(provider_user)
+    api_client.user = provider_user
     return api_client

@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework.routers import SimpleRouter
 
-from apps.api.v1.views import accounts, catalog, providers
+from apps.api.v1.views import accounts, catalog, providers, scheduling
 
 app_name = "v1"
 
@@ -15,5 +15,6 @@ urlpatterns = [
     path("auth/token/refresh", accounts.TokenRefreshRotateView.as_view(), name="auth-refresh"),
     path("auth/logout", accounts.LogoutView.as_view(), name="auth-logout"),
     path("me", accounts.MeView.as_view(), name="me"),
+    path("settings", scheduling.SettingsView.as_view(), name="settings"),
     *router.urls,
 ]

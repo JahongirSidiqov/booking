@@ -85,7 +85,7 @@ def test_other_provider_gets_404(booking):
 def test_edge_35_unlinked_provider_user_sees_nothing(booking):
     unlinked = client_for(UserFactory(role=User.Role.PROVIDER))
     assert_problem(act(unlinked, booking, "confirm"), 404, "NOT_FOUND")
-    assert unlinked.get(BOOKINGS).json() == []
+    assert unlinked.get(BOOKINGS).json()["results"] == []
 
 
 def test_edge_22_confirm_after_start_is_409(staff, booking):
@@ -186,7 +186,7 @@ def test_malformed_id_is_404(admin):
 
 def test_list_is_scoped_by_role(owner, staff, admin, booking, haircut):
     elsewhere = BookingFactory(service=haircut, start_at=START)  # other customer, provider
-    ids = lambda c: {b["id"] for b in c.get(BOOKINGS).json()}  # noqa: E731
+    ids = lambda c: {b["id"] for b in c.get(BOOKINGS).json()["results"]}  # noqa: E731
     assert ids(owner) == {str(booking.pk)}
     assert ids(staff) == {str(booking.pk)}
     assert ids(admin) == {str(booking.pk), str(elsewhere.pk)}

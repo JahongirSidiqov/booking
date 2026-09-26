@@ -325,3 +325,11 @@ def test_edge_25_deactivating_provider_lists_upcoming_bookings(admin_client, hai
         422,
         "INACTIVE_RESOURCE",
     )
+
+
+def test_edge_12_price_change_keeps_old_price_on_booking(customer_client, haircut, sardor):
+    booking_id = book(customer_client, haircut, sardor).json()["id"]
+    haircut.price = Decimal("75000.00")
+    haircut.save()
+    body = customer_client.get(f"{BOOKINGS}/{booking_id}").json()
+    assert body["price"] == "60000.00"

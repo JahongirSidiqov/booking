@@ -135,3 +135,16 @@ def test_impossible_date_rejected(admin_client):
         422,
         "VALIDATION_ERROR",
     )
+
+
+def test_service_rejects_inverted_range_even_without_serializer():
+    from apps.common.exceptions import DomainError
+    from apps.scheduling.services import add_time_off
+
+    with pytest.raises(DomainError) as exc:
+        add_time_off(
+            provider=ProviderFactory(),
+            start_at=datetime(2026, 10, 5, 13, tzinfo=UTC),
+            end_at=datetime(2026, 10, 5, 4, tzinfo=UTC),
+        )
+    assert exc.value.errors == {"end_at": ["Tugash vaqti boshlanishdan keyin boʻlsin."]}

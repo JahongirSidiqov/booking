@@ -280,6 +280,7 @@ SERVICE_FORM = {
     "description": "",
     "duration_minutes": "20",
     "price": "40000",
+    "buffer_after_minutes": "0",
     "sort_order": "1",
     "is_active": "on",
 }

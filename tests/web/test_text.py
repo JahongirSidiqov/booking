@@ -10,7 +10,9 @@ from apps.web import text
 ROOT = Path(__file__).resolve().parents[2]
 
 # oʻ / gʻ written with an ASCII apostrophe or a typographic quote instead of U+02BB.
-WRONG_OKINA = re.compile(r"[oOgG]['‘’`][a-zA-Z]")
+# `'s` at a word end is an English possessive in a code comment ("booking's"), not Uzbek;
+# Uzbek words such as "oʻsish" continue after the s and are still caught.
+WRONG_OKINA = re.compile(r"[oOgG]['‘’`](?!s\b)[a-zA-Z]")
 
 
 def uzbek_sources():
@@ -18,6 +20,13 @@ def uzbek_sources():
     for path in (ROOT / "apps").rglob("*.py"):
         if "migrations" not in path.parts:
             yield path
+
+
+def test_apostrophe_pattern():
+    assert WRONG_OKINA.search("bo'sh") and WRONG_OKINA.search("o'sish")
+    assert WRONG_OKINA.search("yo'q")
+    assert not WRONG_OKINA.search("the booking's own buffer")
+    assert not WRONG_OKINA.search("boʻsh")
 
 
 def test_uzbek_text_uses_a_single_apostrophe():

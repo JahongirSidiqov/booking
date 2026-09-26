@@ -89,6 +89,30 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi bosqichlar bo'yicha qur
 
 ## 3-bosqich — Scheduling
 
+**Prompt (qisqacha):** "davom et" — 3-bosqich (availability rules, time off, business settings).
+
+**Generatsiya qilindi:**
+- `scheduling` modellari: `AvailabilityRule` (mahalliy `time`, CHECK start < end va weekday 0–6), `TimeOff` (CHECK, index `(provider, start_at)`), `BusinessSettings` (singleton `pk=1`, CHECK: step ∈ {5,10,15,20,30,60}, max advance 1–365, lead time ≤ 7 kun, deadline ≤ 14 kun).
+- `services.py`: `replace_availability` (butun hafta bitta PUT, bir kunda kesishish → 422, provider qatoriga `select_for_update`), `add_time_off`, `delete_time_off`, `update_settings`. `selectors.py`: effektiv timezone, qoidalar, time off ro'yxati.
+- API: `GET/PUT /providers/{id}/availability`, `GET/POST /providers/{id}/time-off`, `DELETE /providers/{id}/time-off/{id}`, `GET/PATCH /settings` (ommaga qisqa, admin'ga to'liq).
+- `IsProviderOwnerOrAdmin` + `can_manage_provider` (edge #35), `AwareDateTimeField` (offset'siz datetime → 422).
+- ADR-004 (yarim tundan o'tmaslik), ADR-009 (UTC saqlash, offset majburiy).
+- Testlar: `test_availability.py` (24), `test_time_off.py` (13), `test_settings.py` (13), `test_scheduling_constraints.py` (7).
+
+**Qanday tekshirildi:** `pytest` 164/164, qamrov 97%; `ruff`, `makemigrations --check` toza; dev bazaga migrate.
+
+**Qarorlar:**
+- `BusinessSettings` ma'lumot migratsiyasi bilan emas, `load()` (`get_or_create(pk=1)`) bilan yaratiladi: 5-bosqichdagi `TransactionTestCase` jadvallarni tozalaydi, migratsiyadagi qator yo'qolib qolardi.
+- Jadval o'zgarishi ham provider qatorini lock qiladi — keyin bron yaratish ham shu qatorni lock qiladi, shuning uchun qoida o'zgarishi va bron tekshiruvi aralashib ketmaydi.
+- Yonma-yon oraliqlar (09–13, 13–18) ruxsat etiladi — `[)` semantikasi.
+- Boshqa xodimning jadvaliga kirish — 403 (xodim ommaviy obyekt, mavjudligini yashirish shart emas); boshqa xodimning time off id'si — 404.
+- Time off ro'yxati default holatda faqat tugamaganlarini ko'rsatadi, `?include_past=1` — hammasini.
+- Bron bilan konflikt tekshiruvi (`409 CONFLICTS_WITH_BOOKINGS`, edge #13/#14) TASK 14-bo'limiga ko'ra 7-bosqichda.
+
+**AI xatolari:**
+- Hech biri testda chiqmadi. ruff `zip(windows, windows[1:])` o'rniga `itertools.pairwise` ni taklif qildi — qabul qilindi.
+- `AwareDateTimeField` dagi noto'g'ri sana (`2026-02-30`) tarmog'i testsiz edi — test qo'shildi.
+
 ## 4-bosqich — Slot engine
 
 ## 5-bosqich — Booking create + concurrency

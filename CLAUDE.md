@@ -74,7 +74,9 @@ models/                            → maydonlar, constraint'lar, index'lar (man
 - API URL'lari oxirida `/` yo'q (`/api/v1/auth/token`).
 - API xatolari faqat `DomainError` yoki DRF exception orqali; javob shakli `apps/common/exceptions.py` da.
 - Bash heredoc'da `'` + `ʻ` aralash matn buziladi — Python fayllarni Write vositasi bilan yozish.
+- Skript orqali matn almashtirishda `\b`, `\a` kabi ketma-ketliklar boshqaruv belgisiga aylanadi — `tests/test_architecture.py` buni ushlaydi.
 - Tailwind CLI `-o` OneDrive papkasida EEXIST beradi (Bun bug) — CSS stdout orqali yoziladi (`scripts/build-css.ps1`).
+- Tailwind faqat `templates/` va `apps/` ni skanerlaydi (`source(none)`) — hujjat o'zgarishi CSS'ga ta'sir qilmaydi.
 - Shablon yoki `assets/css` o'zgarsa `static/css/app.css` qayta yig'ilib commit qilinadi (CI tekshiradi).
 - Bu mashinada Docker yo'q: dev/test bazasi lokal PostgreSQL 18, port 5433 (`.env` dagi `DATABASE_URL`).
 
@@ -95,7 +97,7 @@ python manage.py seed_demo
 python manage.py runserver
 
 # CSS (Tailwind v4 standalone CLI, Node'siz)
-.\scriptsuild-css.ps1
+.\scripts\build-css.ps1
 
 # Sifat va testlar
 ruff check .

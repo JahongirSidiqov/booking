@@ -54,3 +54,22 @@ def test_model_allows_saving_other_fields():
     booking = Booking.objects.get(pk=BookingFactory().pk)
     booking.internal_note = "VIP"
     booking.save()
+
+
+TEXT_SUFFIXES = {".md", ".py", ".html", ".txt", ".yml", ".yaml", ".ps1", ".sh", ".toml", ".css"}
+SKIP_DIRS = {".venv", ".tools", ".git", "node_modules", "staticfiles"}
+
+
+def test_no_stray_control_characters_in_sources():
+    """Scripted edits once turned `\b` in `scripts\build-css.ps1` into a backspace byte."""
+    offenders = []
+    for path in ROOT.rglob("*"):
+        rel = path.relative_to(ROOT)
+        if SKIP_DIRS & set(rel.parts) or not path.is_file() or path.suffix not in TEXT_SUFFIXES:
+            continue
+        if rel.parts[:2] in {("static", "js"), ("static", "css")}:  # vendored / generated
+            continue
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if any(ord(ch) < 32 and ch != "\t" for ch in line):
+                offenders.append(f"{rel}:{number}")
+    assert offenders == []

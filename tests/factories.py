@@ -1,3 +1,4 @@
+from datetime import time
 from decimal import Decimal
 
 import factory
@@ -5,6 +6,7 @@ import factory
 from apps.accounts.models import User
 from apps.catalog.models import Service
 from apps.providers.models import Provider
+from apps.scheduling.models import AvailabilityRule
 
 DEFAULT_PASSWORD = "Navbat-Test-2026"
 
@@ -51,3 +53,13 @@ class ProviderFactory(factory.django.DjangoModelFactory):
     def with_services(obj, create, extracted, **kwargs):
         if create and extracted:
             obj.services.add(*extracted)
+
+
+class AvailabilityRuleFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = AvailabilityRule
+
+    provider = factory.SubFactory(ProviderFactory)
+    weekday = 0
+    start_time = time(9, 0)
+    end_time = time(18, 0)

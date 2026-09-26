@@ -1,3 +1,4 @@
+from django.db import DatabaseError, connection
 from django.http import JsonResponse
 from django.views import defaults
 
@@ -22,3 +23,14 @@ def server_error(request):
             status=500,
         )
     return defaults.server_error(request)
+
+
+def healthz(request):
+    """Liveness + DB ping for Docker/Render/Railway health checks. No auth, no throttling."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+    except DatabaseError:
+        return JsonResponse({"status": "error", "database": "unavailable"}, status=503)
+    return JsonResponse({"status": "ok", "database": "ok"})

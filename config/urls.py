@@ -2,7 +2,10 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from apps.common.views import healthz
+
 urlpatterns = [
+    path("healthz", healthz, name="healthz"),
     path("django-admin/", admin.site.urls),
     path("api/v1/", include("apps.api.v1.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

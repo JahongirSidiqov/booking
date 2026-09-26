@@ -110,6 +110,8 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Navbat <no-reply@navbat.uz>")
 # Absolute links in emails (there is no request when an on_commit hook runs).
+# Password for `manage.py seed_demo` accounts (demo only, never a real user).
+DEMO_PASSWORD = env("DEMO_PASSWORD", default="Navbat-Demo-2026")
 SITE_URL = env("SITE_URL", default="http://localhost:8000").rstrip("/")
 
 REST_FRAMEWORK = {

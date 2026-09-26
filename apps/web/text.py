@@ -70,3 +70,14 @@ def day_part(moment: datetime) -> str:
     if moment.hour < 17:
         return "afternoon"
     return "evening"
+
+
+# Reasons the system records as codes; people see sentences.
+SYSTEM_REASONS = {
+    "expired": "Vaqtida tasdiqlanmagani uchun avtomatik bekor qilindi.",
+    "auto_confirm": "Avtomatik tasdiqlandi.",
+}
+
+
+def reason(value: str) -> str:
+    return SYSTEM_REASONS.get(value, value)

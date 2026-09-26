@@ -25,7 +25,7 @@
       <div class="flex justify-between gap-4 p-4"><dt class="text-muted">Xodim</dt><dd class="text-right font-medium">{{ booking.provider.name }}</dd></div>
       <div class="flex justify-between gap-4 p-4"><dt class="text-muted">Narx</dt><dd class="text-right font-semibold tabular-nums">{{ booking.price|money:business.currency }}</dd></div>
       {% if booking.customer_note %}<div class="flex flex-col gap-1 p-4"><dt class="text-muted">Mijoz izohi</dt><dd class="break-words">{{ booking.customer_note }}</dd></div>{% endif %}
-      {% if booking.cancel_reason %}<div class="flex flex-col gap-1 p-4"><dt class="text-muted">Bekor qilish sababi</dt><dd class="break-words">{{ booking.cancel_reason }}</dd></div>{% endif %}
+      {% if booking.cancel_reason %}<div class="flex flex-col gap-1 p-4"><dt class="text-muted">Bekor qilish sababi</dt><dd class="break-words">{{ booking.cancel_reason|reason_text }}</dd></div>{% endif %}
     </dl>
 
     <section aria-labelledby="timeline-title">
@@ -38,7 +38,7 @@
             <div>
               <p class="font-medium">{{ entry.to_status|status_label }}</p>
               <p class="text-sm text-muted tabular-nums">{{ entry.created_at|local_short_day:display_tz }}, {{ entry.created_at|local_time:display_tz }} · {{ entry|actor_label }}{% if entry.changed_by %} ({{ entry.changed_by.full_name }}){% endif %}</p>
-              {% if entry.reason %}<p class="mt-1 text-sm break-words">{{ entry.reason }}</p>{% endif %}
+              {% if entry.reason %}<p class="mt-1 text-sm break-words">{{ entry.reason|reason_text }}</p>{% endif %}
             </div>
           </li>
         {% endfor %}

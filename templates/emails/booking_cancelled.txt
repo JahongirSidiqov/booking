@@ -1,6 +1,6 @@
-{% autoescape off %}{% if by_customer %}{{ booking.customer.full_name }}, bronni bekor qilganingiz qayd etildi. Bu vaqt boshqa mijozlar uchun ochildi.{% else %}{{ booking.customer.full_name }}, afsuski, bronni {{ business.name }} bekor qildi.{% if booking.cancel_reason %}
+{% load navbat %}{% autoescape off %}{% if by_customer %}{{ booking.customer.full_name }}, bronni bekor qilganingiz qayd etildi. Bu vaqt boshqa mijozlar uchun ochildi.{% else %}{{ booking.customer.full_name }}, afsuski, bronni {{ business.name }} bekor qildi.{% if booking.cancel_reason %}
 
-Sabab: {{ booking.cancel_reason }}{% endif %}{% endif %}
+Sabab: {{ booking.cancel_reason|reason_text }}{% endif %}{% endif %}
 
 Xizmat: {{ booking.service_name }}
 Xodim:  {{ booking.provider.name }}

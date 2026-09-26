@@ -252,3 +252,45 @@ def transition_booking(
     )
     transaction.on_commit(partial(notifications.booking_status_changed, booking.pk, to_status))
     return booking
+
+
+EXPIRED_REASON = "expired"
+
+
+def expire_stale_bookings(*, now: datetime | None = None) -> int:
+    """Cancel pending bookings whose start time has passed without confirmation.
+
+    Each booking is re-read under a row lock and skipped unless it is *still* pending: a
+    provider may confirm it while this runs, and a plain system transition would then cancel
+    a confirmed booking (confirmed → cancelled is a legal move for the system).
+    """
+    now = now or timezone.now()
+    business = BusinessSettings.load()
+    candidates = list(
+        Booking.objects.filter(status=Booking.Status.PENDING, start_at__lte=now).values_list(
+            "pk", flat=True
+        )
+    )
+    expired = 0
+    for pk in candidates:
+        with transaction.atomic():
+            booking = (
+                Booking.objects.select_for_update()
+                .filter(pk=pk, status=Booking.Status.PENDING)
+                .first()
+            )
+            if booking is None:
+                continue
+            _apply(
+                booking,
+                Booking.Status.CANCELLED,
+                actor=None,
+                reason=EXPIRED_REASON,
+                now=now,
+                business=business,
+            )
+            transaction.on_commit(
+                partial(notifications.booking_status_changed, booking.pk, Booking.Status.CANCELLED)
+            )
+            expired += 1
+    return expired

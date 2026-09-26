@@ -1,10 +1,10 @@
-{% autoescape off %}Mijoz bronni bekor qildi. Bu vaqt yana boʻsh.
+{% load navbat %}{% autoescape off %}Mijoz bronni bekor qildi. Bu vaqt yana boʻsh.
 
 Mijoz:  {{ booking.customer.full_name }}{% if booking.customer.phone %}, {{ booking.customer.phone }}{% endif %}
 Xizmat: {{ booking.service_name }}
 Sana:   {{ when.day }}
 Vaqt:   {{ when.time }} ({{ when.tz }}){% if booking.cancel_reason %}
-Sabab:  {{ booking.cancel_reason }}{% endif %}
+Sabab:  {{ booking.cancel_reason|reason_text }}{% endif %}
 
 Bronni ochish: {{ link }}
 

@@ -103,3 +103,8 @@ def actor_label(entry) -> str:
 @register.filter
 def status_label(status: str) -> str:
     return STATUS_BADGES[status][0]
+
+
+@register.filter
+def reason_text(value: str) -> str:
+    return text.reason(value)

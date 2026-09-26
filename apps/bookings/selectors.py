@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 
 from apps.accounts.models import User
 
@@ -83,3 +83,15 @@ def filter_bookings(
         # Upcoming = not finished yet, soonest first; history views read newest first.
         return qs.filter(end_at__gt=upcoming_after).order_by("start_at", "id")
     return qs.order_by("-start_at", "id")
+
+
+def customer_tab(user: User, tab: str, *, now: datetime) -> QuerySet[Booking]:
+    """'Bronlarim' tabs: upcoming (active, not finished), past, cancelled."""
+    qs = visible_bookings(user).filter(customer=user)
+    if tab == "cancelled":
+        return qs.filter(status=Booking.Status.CANCELLED).order_by("-start_at")
+    if tab == "past":
+        return qs.filter(
+            Q(status=Booking.Status.COMPLETED) | Q(status__in=ACTIVE_STATUSES, end_at__lte=now)
+        ).order_by("-start_at")
+    return qs.filter(status__in=ACTIVE_STATUSES, end_at__gt=now).order_by("start_at")

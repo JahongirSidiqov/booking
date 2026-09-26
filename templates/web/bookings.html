@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load navbat %}
+{% block title %}Bronlarim{% endblock %}
+{% block main_class %}container-narrow py-6 md:py-10{% endblock %}
+{% block content %}
+<h1 class="text-2xl md:text-3xl">Bronlarim</h1>
+
+<nav class="mt-6 flex gap-1 border-b border-border" aria-label="Bron turlari">
+  {% for key, label in tabs %}
+    <a href="?tab={{ key }}" class="-mb-px flex min-h-11 items-center border-b-2 px-3 text-sm font-medium {% if key == tab %}border-primary text-primary{% else %}border-transparent text-muted hover:text-text{% endif %}"
+       {% if key == tab %}aria-current="page"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>
+
+{% if bookings %}
+  <ul class="mt-6 flex flex-col gap-3">
+    {% for booking in bookings %}
+      <li>
+        <a href="{% url 'web:booking_detail' booking.pk %}" class="card flex items-center gap-4 p-4 transition-shadow hover:shadow-md">
+          <div class="flex w-14 shrink-0 flex-col items-center rounded-md bg-bg-subtle py-2 text-center">
+            <span class="text-xs text-muted">{{ booking.start_at|local_short_day:display_tz|slice:":2" }}</span>
+            <span class="text-lg font-semibold tabular-nums">{{ booking.start_at|local_time:display_tz }}</span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-semibold">{{ booking.service_name }}</p>
+            <p class="truncate text-sm text-muted">{{ booking.provider.name }} · {{ booking.start_at|local_short_day:display_tz }}</p>
+          </div>
+          {% status_badge booking.status %}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="mt-6">
+    {% if tab == "upcoming" %}
+      {% url 'web:home' as home_url %}
+      {% include "components/empty_state.html" with icon_name="calendar" title="Kelgusi bronlaringiz yoʻq" body="Xizmat tanlab, qulay vaqtga yoziling." action_url=home_url action_label="Xizmat tanlash" %}
+    {% elif tab == "past" %}
+      {% include "components/empty_state.html" with icon_name="list-checks" title="Oʻtgan bronlar yoʻq" body="Uchrashuvlaringiz tugagach, shu yerda koʻrinadi." %}
+    {% else %}
+      {% include "components/empty_state.html" with icon_name="circle-x" title="Bekor qilingan bronlar yoʻq" %}
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}

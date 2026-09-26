@@ -75,7 +75,7 @@ models/                            → maydonlar, constraint'lar, index'lar (man
 - API xatolari faqat `DomainError` yoki DRF exception orqali; javob shakli `apps/common/exceptions.py` da.
 - Bash heredoc'da `'` + `ʻ` aralash matn buziladi — Python fayllarni Write vositasi bilan yozish.
 - Tailwind CLI `-o` OneDrive papkasida EEXIST beradi (Bun bug) — CSS stdout orqali yoziladi (`scripts/build-css.ps1`).
-- Shablon yoki `static/src` o'zgarsa `static/css/app.css` qayta yig'ilib commit qilinadi (CI tekshiradi).
+- Shablon yoki `assets/css` o'zgarsa `static/css/app.css` qayta yig'ilib commit qilinadi (CI tekshiradi).
 - Bu mashinada Docker yo'q: dev/test bazasi lokal PostgreSQL 18, port 5433 (`.env` dagi `DATABASE_URL`).
 
 ## PowerShell buyruqlari

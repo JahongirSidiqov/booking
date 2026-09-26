@@ -1,4 +1,5 @@
-# Builds static/css/app.css with the pinned Tailwind standalone CLI (no Node.js needed).
+# Builds static/css/app.css from assets/css/app.css with the pinned Tailwind standalone CLI
+# (no Node.js needed).
 # Usage:  .\scripts\build-css.ps1
 $ErrorActionPreference = "Stop"
 $Version = "v4.3.3"
@@ -17,8 +18,16 @@ if (-not (Test-Path $Exe)) {
 # re-encode them as UTF-16.
 Push-Location $Root
 try {
-    cmd /c "`"$Exe`" -i static\src\app.css --minify > static\css\app.css"
-    if ($LASTEXITCODE -ne 0) { throw "Tailwind build failed" }
+    # Build into a temp file and only replace app.css on success: a failed build must never
+    # leave an empty stylesheet behind (cmd's `>` creates the file before Tailwind runs).
+    $Tmp = "static\css\app.css.tmp"
+    cmd /c "`"$Exe`" -i assets\css\app.css --minify > $Tmp"
+    $ok = ($LASTEXITCODE -eq 0) -and (Test-Path $Tmp) -and ((Get-Item $Tmp).Length -gt 1000)
+    if (-not $ok) {
+        Remove-Item -Force -ErrorAction SilentlyContinue $Tmp
+        throw "Tailwind build failed; static/css/app.css was left unchanged"
+    }
+    Move-Item -Force $Tmp "static\css\app.css"
     Write-Host "static/css/app.css rebuilt"
 } finally {
     Pop-Location

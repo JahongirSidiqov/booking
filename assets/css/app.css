@@ -1,3 +1,6 @@
+/* Tailwind source. Lives outside static/ on purpose: collectstatic's manifest step would try
+   to resolve @import "tailwindcss" and fail. The built file is static/css/app.css, and the
+   url() paths below are relative to that output location. */
 @import "tailwindcss";
 @import "./tokens.css";
 

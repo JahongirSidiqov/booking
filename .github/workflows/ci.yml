@@ -23,7 +23,7 @@ jobs:
           curl -sSfL -o /usr/local/bin/tailwindcss \
             https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.3/tailwindcss-linux-x64
           chmod +x /usr/local/bin/tailwindcss
-          tailwindcss -i static/src/app.css -o /tmp/app.css --minify
+          tailwindcss -i assets/css/app.css -o /tmp/app.css --minify
           diff -q static/css/app.css /tmp/app.css || {
             echo "static/css/app.css is stale: run scripts/build-css.ps1 and commit it"; exit 1; }
 
@@ -59,6 +59,16 @@ jobs:
         env:
           DJANGO_SETTINGS_MODULE: config.settings.test
       - run: pytest --cov --cov-report=term-missing
+      - name: Production settings pass Django's deployment checklist
+        run: python manage.py check --deploy --fail-level WARNING
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.prod
+          SECRET_KEY: ci-deploy-check-key-that-is-long-enough-and-random-looking-9f8e7d6c5b4a
+          ALLOWED_HOSTS: navbat.example.uz
+      - name: Demo seed runs on a clean database
+        run: python manage.py migrate --noinput && python manage.py seed_demo
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.dev
 
   docker:
     runs-on: ubuntu-latest
@@ -66,3 +76,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -f docker/Dockerfile -t navbat:ci .
+
+  compose-smoke:
+    # The production stack exactly as a VPS would run it: build, migrate, serve, schedule.
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Production env for the smoke test
+        run: |
+          cp .env.prod.example .env.prod
+          sed -i "s|^SECRET_KEY=.*|SECRET_KEY=$(openssl rand -hex 32)|" .env.prod
+          sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 16)|" .env.prod
+          sed -i "s|^EMAIL_BACKEND=.*|EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend|" .env.prod
+      - name: Start db + web + scheduler
+        run: docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build --wait --wait-timeout 180
+      - name: Health, HTTPS redirect, static files, seed, scheduler
+        run: |
+          curl -fsS http://localhost:8000/healthz
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/)" = "301"
+          docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T web python manage.py seed_demo
+          curl -fsS -H "X-Forwarded-Proto: https" http://localhost:8000/ | grep -q "Navbat Barbershop"
+          # WhiteNoise serves hashed names in production: read the real URL from the page.
+          css=$(curl -fsS -H "X-Forwarded-Proto: https" http://localhost:8000/ | grep -o '/static/css/app\.[0-9a-f]*\.css' | head -1)
+          test -n "$css"
+          curl -fsS -o /dev/null -H "X-Forwarded-Proto: https" "http://localhost:8000$css"
+          docker compose -f docker-compose.prod.yml --env-file .env.prod logs scheduler | grep -q "expired:"
+      - if: failure()
+        run: docker compose -f docker-compose.prod.yml --env-file .env.prod logs

@@ -21,6 +21,7 @@ known-first-party = ["apps", "config", "tests"]
 DJANGO_SETTINGS_MODULE = "config.settings.test"
 python_files = ["test_*.py"]
 addopts = "-ra --strict-markers"
+markers = ["e2e: real-browser tests (Playwright); skipped when Playwright is not installed"]
 testpaths = ["tests"]
 filterwarnings = [
     # WhiteNoise warns when collectstatic has not run; tests never serve static files.

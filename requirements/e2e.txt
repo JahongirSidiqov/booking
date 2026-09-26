@@ -1,0 +1,3 @@
+-r dev.txt
+# Real-browser UI checks (tests/e2e). After install: python -m playwright install chromium
+playwright>=1.55,<2

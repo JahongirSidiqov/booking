@@ -1,6 +1,7 @@
 import logging
 
 from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
+from django.db import IntegrityError, InterfaceError, OperationalError
 from django.http import Http404
 from rest_framework import exceptions, status
 from rest_framework.response import Response
@@ -19,7 +20,44 @@ TITLES = {
     "UNSUPPORTED_MEDIA_TYPE": "Qoʻllab-quvvatlanmaydigan format",
     "THROTTLED": "Soʻrovlar juda koʻp",
     "SERVER_ERROR": "Server xatosi",
+    "SERVICE_UNAVAILABLE": "Xizmat vaqtincha ishlamayapti",
+    "SLOT_TAKEN": "Bu vaqt band",
+    "CUSTOMER_OVERLAP": "Vaqtingiz band",
 }
+
+# Database constraints whose violation is a normal business outcome, not a bug.
+CONSTRAINT_ERRORS = {
+    "no_overlap_per_provider": (
+        "SLOT_TAKEN",
+        "Tanlangan vaqt boshqa mijoz tomonidan band qilindi. Boshqa vaqtni tanlang.",
+    ),
+    "no_overlap_per_customer": ("CUSTOMER_OVERLAP", "Sizda shu vaqtga boshqa bron bor."),
+}
+
+
+def constraint_name(exc: IntegrityError) -> str | None:
+    diag = getattr(exc.__cause__, "diag", None)
+    return getattr(diag, "constraint_name", None)
+
+
+def _database_error(exc) -> Response | None:
+    if isinstance(exc, IntegrityError):
+        known = CONSTRAINT_ERRORS.get(constraint_name(exc))
+        if known is None:
+            return None
+        # Any write path that skipped the service checks still ends in the same 409.
+        code, detail = known
+        return Response(problem(code, 409, detail), status=409)
+    if isinstance(exc, OperationalError | InterfaceError):
+        # The transaction was rolled back and on_commit hooks never ran: nothing was saved.
+        logger.error("Database unavailable: %s", exc)
+        body = problem(
+            "SERVICE_UNAVAILABLE",
+            503,
+            "Maʼlumotlar bazasi bilan aloqa uzildi. Hech narsa saqlanmadi, qayta urinib koʻring.",
+        )
+        return Response(body, status=503, headers={"Retry-After": "5"})
+    return None
 
 
 class DomainError(Exception):
@@ -98,6 +136,10 @@ def problem_exception_handler(exc, context):
             extra=exc.extra,
         )
         return Response(body, status=exc.http_status)
+
+    database_response = _database_error(exc)
+    if database_response is not None:
+        return database_response
 
     if isinstance(exc, Http404):
         exc = exceptions.NotFound()

@@ -8,7 +8,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.common.exceptions import DomainError
+from apps.common.exceptions import CONSTRAINT_ERRORS, DomainError, constraint_name
 from apps.providers.models import Provider
 from apps.scheduling import selectors as scheduling_selectors
 from apps.scheduling import slot_engine
@@ -35,11 +35,6 @@ SLOT_ERRORS = {
     "CUSTOMER_OVERLAP": ("Sizda shu vaqtga boshqa bron bor.", 409, "Vaqtingiz band"),
 }
 
-CONSTRAINT_ERRORS = {
-    "no_overlap_per_provider": "SLOT_TAKEN",
-    "no_overlap_per_customer": "CUSTOMER_OVERLAP",
-}
-
 
 @dataclass(frozen=True)
 class CreateResult:
@@ -54,17 +49,13 @@ def slot_error(code: str) -> DomainError:
 
 def constraint_error_code(exc: IntegrityError) -> str | None:
     """Map a violated exclusion constraint to its domain error code (None if unrelated)."""
-    return CONSTRAINT_ERRORS.get(_constraint_name(exc))
+    known = CONSTRAINT_ERRORS.get(constraint_name(exc))
+    return known[0] if known else None
 
 
 def fingerprint(*, service_id, provider_id, start_at: datetime, note: str) -> str:
     raw = f"{service_id}|{provider_id}|{start_at.astimezone(UTC).isoformat()}|{note}"
     return hashlib.sha256(raw.encode()).hexdigest()
-
-
-def _constraint_name(exc: IntegrityError) -> str | None:
-    diag = getattr(exc.__cause__, "diag", None)
-    return getattr(diag, "constraint_name", None)
 
 
 def _lock_provider(provider_id) -> Provider | None:
@@ -130,7 +121,7 @@ def create_booking(
         code = constraint_error_code(exc)
         if code:
             raise slot_error(code) from exc
-        if _constraint_name(exc) == "uniq_idempotency_per_customer":
+        if constraint_name(exc) == "uniq_idempotency_per_customer":
             replay = _replay(customer, idempotency_key, payload_hash)
             if replay is not None:
                 return replay

@@ -1,11 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.models import User
+from apps.bookings import ical
 from apps.bookings import selectors as booking_selectors
 from apps.bookings import services as booking_services
 from apps.bookings.models import ACTIVE_STATUSES, Booking
@@ -84,3 +85,14 @@ def cancel_booking(request, booking_id):
     else:
         messages.success(request, "Bron bekor qilindi.")
     return redirect("web:booking_detail", booking_id=booking_id)
+
+
+@login_required
+def booking_ical(request, booking_id):
+    booking = booking_selectors.visible_booking(request.user, booking_id)
+    if booking is None or booking.customer_id != request.user.pk:
+        raise Http404
+    filename, body = ical.calendar_file(booking)
+    response = HttpResponse(body, content_type="text/calendar; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response

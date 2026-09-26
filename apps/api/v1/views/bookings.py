@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
@@ -20,7 +21,7 @@ from apps.api.v1.serializers.bookings import (
     validate_idempotency_key,
 )
 from apps.api.v1.views.availability import resolve_tz
-from apps.bookings import selectors, services
+from apps.bookings import ical, selectors, services
 from apps.bookings.models import Booking
 from apps.scheduling.models import BusinessSettings
 from apps.scheduling.slot_engine import local_day_bounds
@@ -102,6 +103,16 @@ def _transition_schema(summary: str, description: str, extra_errors=None):
         "Bekor qilish",
         "Mijoz — `can_cancel_until` gacha; xodim/admin — istalgan vaqtda, `reason` majburiy.",
         problems(s422="CANCELLATION_DEADLINE_PASSED, VALIDATION_ERROR"),
+    ),
+    ical=extend_schema(
+        summary="Bronni kalendarga eksport qilish (.ics)",
+        description="Faqat bron egasi (mijoz) uchun; boshqalarga 404. Bekor qilingan bron "
+        "`STATUS:CANCELLED` bilan qaytadi, shunda kalendar voqeani oʻchiradi.",
+        parameters=[UUID_PATH],
+        responses={
+            (200, "text/calendar"): OpenApiTypes.STR,
+            **problems(s401="AUTH_REQUIRED", s404="NOT_FOUND"),
+        },
     ),
     complete=_transition_schema(
         "Bajarildi deb belgilash (xodim/admin)", "`confirmed → completed`, boshlanganidan keyin."
@@ -204,3 +215,13 @@ class BookingViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
         return self._transition(request, pk, Booking.Status.COMPLETED)
+
+    @action(detail=True, methods=["get"])
+    def ical(self, request, pk=None):
+        booking = self._visible(pk)
+        if booking.customer_id != request.user.pk:
+            raise NotFound()
+        filename, body = ical.calendar_file(booking)
+        response = HttpResponse(body, content_type="text/calendar; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response

@@ -25,6 +25,10 @@
   {% endif %}
 </dl>
 
+{% if booking.status == "pending" or booking.status == "confirmed" %}
+  <div class="mt-4"><a href="{% url 'web:booking_ical' booking.pk %}" class="btn btn-ghost btn-block" download>{% icon "calendar" 18 %}Kalendarga qoʻshish (.ics)</a></div>
+{% endif %}
+
 <section class="mt-8" aria-labelledby="timeline-title">
   <h2 id="timeline-title" class="text-lg">Holat tarixi</h2>
   <ol class="mt-4 flex flex-col">

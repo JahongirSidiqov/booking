@@ -25,4 +25,5 @@
   <a href="{% url 'web:booking_detail' booking.pk %}" class="btn btn-primary btn-lg flex-1">Bronni koʻrish</a>
   <a href="{% url 'web:home' %}" class="btn btn-secondary btn-lg flex-1">Yana bron qilish</a>
 </div>
+<div class="mt-3"><a href="{% url 'web:booking_ical' booking.pk %}" class="btn btn-ghost btn-block" download>{% icon "calendar" 18 %}Kalendarga qoʻshish (.ics)</a></div>
 {% endblock %}

@@ -19,10 +19,12 @@ urlpatterns = [
     path("bookings/", customer.my_bookings, name="bookings"),
     path("bookings/<uuid:booking_id>/", customer.booking_detail, name="booking_detail"),
     path("bookings/<uuid:booking_id>/cancel/", customer.cancel_booking, name="booking_cancel"),
+    path("bookings/<uuid:booking_id>/ical/", customer.booking_ical, name="booking_ical"),
     path("login/", account.LoginView.as_view(), name="login"),
     path("logout/", account.LogoutView.as_view(), name="logout"),
     path("register/", account.register, name="register"),
     path("profile/", account.profile, name="profile"),
+    path("timezone/", account.set_timezone, name="set_timezone"),
     # --- dashboard (provider + admin) ---
     path("dashboard/", dashboard_bookings.today, name="dashboard"),
     path("dashboard/bookings/", dashboard_bookings.booking_list, name="dashboard_bookings"),

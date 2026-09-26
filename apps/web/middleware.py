@@ -1,8 +1,10 @@
 from django.utils import timezone
 
+from apps.common.utils.time import is_valid_timezone
 from apps.scheduling.models import BusinessSettings
 
 SKIP_PREFIXES = ("/api/", "/healthz")
+SESSION_TZ_KEY = "display_tz"
 
 
 class DisplayTimezoneMiddleware:
@@ -21,7 +23,13 @@ class DisplayTimezoneMiddleware:
         if request.path.startswith(SKIP_PREFIXES):
             return self.get_response(request)
         user = getattr(request, "user", None)
-        tz = user.timezone if user is not None and user.is_authenticated else None
+        if user is not None and user.is_authenticated:
+            tz = user.timezone
+        else:
+            # Anonymous visitors can pick a zone too (banner button); it lives in the session.
+            tz = request.session.get(SESSION_TZ_KEY)
+            if tz and not is_valid_timezone(tz):
+                tz = None
         request.display_tz = tz or BusinessSettings.load().timezone
         timezone.activate(request.display_tz)
         try:

@@ -44,12 +44,16 @@
   <div x-data="{ browser: Intl.DateTimeFormat().resolvedOptions().timeZone }"
        x-show="browser && browser !== '{{ display_tz|escapejs }}'" x-cloak
        class="border-b border-warning/30 bg-warning-soft">
-    <p class="container-page flex items-start gap-2 py-2 text-sm text-text">
+    <div class="container-page flex flex-wrap items-start gap-2 py-2 text-sm text-text">
       {% icon "info" 16 "mt-0.5 text-warning" %}
-      <span>Vaqtlar <strong>{{ display_tz }}</strong> boʻyicha koʻrsatilmoqda, qurilmangiz esa <strong x-text="browser"></strong> zonasida.
-        {% if user.is_authenticated %}<a class="font-medium text-primary underline" href="{% url 'web:profile' %}">Zonani oʻzgartirish</a>{% endif %}
-      </span>
-    </p>
+      <span class="min-w-0 flex-1">Vaqtlar <strong>{{ display_tz }}</strong> boʻyicha koʻrsatilmoqda, qurilmangiz esa <strong x-text="browser"></strong> zonasida.</span>
+      <form method="post" action="{% url 'web:set_timezone' %}" class="-my-3 w-full pl-6 sm:w-auto sm:pl-0">
+        {% csrf_token %}
+        <input type="hidden" name="tz" :value="browser">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="inline-flex min-h-11 items-center font-medium text-primary underline">Qurilma zonasiga oʻtish</button>
+      </form>
+    </div>
   </div>
 
   <div class="pointer-events-none fixed inset-x-0 top-16 z-40 flex flex-col items-center gap-2 px-4 md:top-20 md:right-6 md:left-auto md:w-96" aria-live="polite" role="status">

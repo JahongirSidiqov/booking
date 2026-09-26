@@ -5,11 +5,14 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 
 from apps.accounts import services as account_services
 from apps.common.exceptions import DomainError
+from apps.common.utils.time import is_valid_timezone
 from apps.web.access import STAFF_ROLES
 from apps.web.forms import LoginForm, ProfileForm, RegisterForm
+from apps.web.middleware import SESSION_TZ_KEY
 
 
 def _safe_next(request, default="web:home"):
@@ -73,3 +76,18 @@ def profile(request):
         messages.success(request, "Profil saqlandi.")
         return redirect("web:profile")
     return render(request, "web/profile.html", {"form": form})
+
+
+@require_POST
+def set_timezone(request):
+    """Banner button: show dates in the device's zone (profile for users, session otherwise)."""
+    tz = request.POST.get("tz", "")
+    if not is_valid_timezone(tz):
+        messages.error(request, "Vaqt zonasi aniqlanmadi. Profilda qoʻlda tanlang.")
+    elif request.user.is_authenticated:
+        account_services.update_profile(user=request.user, timezone=tz)
+        messages.success(request, f"Vaqtlar endi {tz} zonasida koʻrsatiladi.")
+    else:
+        request.session[SESSION_TZ_KEY] = tz
+        messages.success(request, f"Vaqtlar endi {tz} zonasida koʻrsatiladi.")
+    return redirect(_safe_next(request))

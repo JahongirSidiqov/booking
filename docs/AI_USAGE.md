@@ -204,6 +204,30 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi bosqichlar bo'yicha qur
 
 ## 7-bosqich — API polish
 
+**Prompt (qisqacha):** "davom et" — 7-bosqich (problem-details handler, filtrlar/pagination/throttle, OpenAPI + Swagger, time off / ish vaqti o'zgarishida konflikt tekshiruvi).
+
+**Generatsiya qilindi:**
+- Konflikt tekshiruvi: `add_time_off` va `replace_availability` provider lock ostida faol bronlarni tekshiradi → `409 CONFLICTS_WITH_BOOKINGS` + `bookings` ro'yxati (edge #13, #14). Qamrov hisobi sof `slot_engine.uncovered`. ADR-005.
+- Xato handler'i: exclusion `IntegrityError` har qanday yo'ldan → 409 (`CONSTRAINT_ERRORS` endi `common` da, `bookings.services` ham shundan foydalanadi); `OperationalError`/`InterfaceError` → `503 SERVICE_UNAVAILABLE` + `Retry-After` (edge #37); `/api/` ostidagi noma'lum URL va 500 → JSON (`apps/common/views.py`, `handler404/500`).
+- `GET /bookings`: `PagePagination` (`page`, `page_size` 20/100, `count/page/page_size/total_pages/next/previous/results`), filtrlar `status` (vergul bilan), `provider`, `service`, `from`/`to` (ko'ruvchi zonasidagi kunlar), `upcoming=1` (eng yaqini birinchi), `tz`.
+- OpenAPI: `drf-spectacular`, `/api/schema/`, `/api/docs/`. Barcha endpointlarga `@extend_schema` (summary, parametrlar, request/response, har xato kodi). Javob dict'lari haqiqiy serializer'larga o'tkazildi (`BookingSerializer`, `SlotsResponseSerializer`, `DaysResponseSerializer`, `AvailabilityResponseSerializer`, `DeactivationSerializer`) — sxema va javob bitta manbadan, bir-biridan uzoqlashmaydi. `ProblemSerializer` faqat hujjat uchun.
+- Testlar: `test_schedule_conflicts.py` (8), `test_api_polish.py` (22), `test_exception_handler.py` (10), `uncovered` unit testlari, edge #12 alohida testi.
+
+**Qanday tekshirildi:**
+- `pytest` 438/438, qamrov 99% (`common/exceptions.py`, `slot_engine.py`, `bookings/*` 100%).
+- `manage.py spectacular --validate --fail-on-warn` — 0 ogohlantirish; test ham shuni chaqiradi va har operatsiyada `summary` borligini tekshiradi.
+- Javoblarni serializer'ga o'tkazishdan oldin va keyin eski testlar o'zgarishsiz o'tdi — shakl bayt-bayt bir xil qoldi (faqat ro'yxat pagination bilan o'raldi, 2 test yangilandi).
+- 8-bo'limdagi har case uchun `test_edge_XX_` nomli test borligi skript bilan tekshirildi: faqat #29 (email, 10-bosqich) va #33 (UI, 8-bosqich) qoldi.
+
+**Qarorlar:**
+- Pagination faqat `GET /bookings` da. Xizmat va xodim ro'yxatlari kichik va chegaralangan, UI ularni to'liq ko'rsatadi.
+- Noma'lum `IntegrityError` (biznes constraint emas) ataylab 500 bo'lib qoladi — bu bug, yashirilmasin.
+- Xizmat/xodim ro'yxatida admin qo'shimcha maydonlarni ko'radi; OpenAPI'da ommaviy shakl + tavsifda izoh (polimorf sxema ortiqcha).
+
+**AI xatolari / noaniqliklar:**
+- Bir to'liq ishga tushishda **1 test yiqildi**, qaysi ekanini ko'rmay qoldim (natija faqat "1 failed"). Keyin 10 ta to'liq va 6 ta concurrency ishga tushishda qayta chiqmadi. Ehtimol test faylini tahrirlash bilan bir vaqtga to'g'ri kelgan, lekin isbotlanmagan — kuzatuvda.
+- Ruff bitta chalkash assert'ni (`list(...)[0].hour`) belgiladi — `.get().start_time == time(9)` ga soddalashtirildi.
+
 ## 8-bosqich — UI (mijoz)
 
 ## 9-bosqich — UI (dashboard)

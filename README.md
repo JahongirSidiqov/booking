@@ -55,6 +55,12 @@ docs/        arxitektura, edge case'lar, AI jurnali, ADR'lar
 docker/      Dockerfile, entrypoint.sh
 ```
 
+## API
+
+- Swagger UI: http://localhost:8000/api/docs/
+- OpenAPI sxema: http://localhost:8000/api/schema/
+- Bazaviy yo'l: `/api/v1/`, autentifikatsiya `Authorization: Bearer <access>` (`POST /api/v1/auth/token`).
+
 ## Hujjatlar
 
 - [docs/decisions/](docs/decisions/) — arxitektura qarorlari (ADR)

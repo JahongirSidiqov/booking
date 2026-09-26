@@ -3,12 +3,14 @@
 import hashlib
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from functools import partial
 
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.common.exceptions import CONSTRAINT_ERRORS, DomainError, constraint_name
+from apps.notifications import senders as notifications
 from apps.providers.models import Provider
 from apps.scheduling import selectors as scheduling_selectors
 from apps.scheduling import slot_engine
@@ -181,6 +183,9 @@ def _create_locked(
             now=now,
             business=business,
         )
+    # on_commit: no email for a booking that is rolled back, and a mail failure happens
+    # after the booking is safely stored (ADR-006, edge cases #29, #37).
+    transaction.on_commit(partial(notifications.booking_created, booking.pk))
     return CreateResult(booking, replayed=False)
 
 
@@ -237,7 +242,7 @@ def transition_booking(
     booking = Booking.objects.select_for_update().filter(pk=booking_id).first()
     if booking is None or (actor is not None and not selectors.can_view(actor, booking)):
         raise DomainError("NOT_FOUND", "Bron topilmadi.", 404)
-    return _apply(
+    booking = _apply(
         booking,
         to_status,
         actor=actor,
@@ -245,3 +250,5 @@ def transition_booking(
         now=now or timezone.now(),
         business=BusinessSettings.load(),
     )
+    transaction.on_commit(partial(notifications.booking_status_changed, booking.pk, to_status))
+    return booking

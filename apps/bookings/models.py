@@ -106,6 +106,33 @@ class Booking(BaseModel):
     def __str__(self):
         return f"{self.service_name} · {self.start_at:%Y-%m-%d %H:%M}Z · {self.status}"
 
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._loaded_status = instance.status
+        return instance
+
+    def save(self, *args, **kwargs):
+        # A status change outside bookings.services would skip guards and history; the
+        # service marks its own changes with _status_change_allowed.
+        loaded = getattr(self, "_loaded_status", None)
+        if (
+            not self._state.adding
+            and loaded is not None
+            and loaded != self.status
+            and not getattr(self, "_status_change_allowed", False)
+        ):
+            raise StatusChangeError(
+                "Booking.status faqat apps.bookings.services orqali oʻzgartiriladi."
+            )
+        super().save(*args, **kwargs)
+        self._loaded_status = self.status
+        self._status_change_allowed = False
+
+
+class StatusChangeError(Exception):
+    pass
+
 
 class ImmutableHistoryError(Exception):
     pass

@@ -12,8 +12,9 @@ from apps.common.exceptions import DomainError
 from apps.providers.models import Provider
 from apps.scheduling import selectors as scheduling_selectors
 from apps.scheduling import slot_engine
+from apps.scheduling.models import BusinessSettings
 
-from . import selectors
+from . import selectors, state_machine
 from .models import Booking, BookingStatusHistory
 
 SLOT_ERRORS = {
@@ -179,8 +180,77 @@ def _create_locked(
         idempotency_fingerprint=payload_hash if idempotency_key else "",
     )
     _record(booking, None, Booking.Status.PENDING, customer)
-    if inputs["settings"].auto_confirm:
-        booking.status = Booking.Status.CONFIRMED
-        booking.save(update_fields=["status", "updated_at"])
-        _record(booking, Booking.Status.PENDING, Booking.Status.CONFIRMED, None, "auto_confirm")
+    business = inputs["settings"]
+    if business.auto_confirm:
+        _apply(
+            booking,
+            Booking.Status.CONFIRMED,
+            actor=None,
+            reason="auto_confirm",
+            now=now,
+            business=business,
+        )
     return CreateResult(booking, replayed=False)
+
+
+def actor_role(actor: User | None) -> str:
+    return actor.role if actor is not None else state_machine.SYSTEM
+
+
+def _apply(
+    booking: Booking,
+    to_status: str,
+    *,
+    actor: User | None,
+    reason: str,
+    now: datetime,
+    business: BusinessSettings,
+) -> Booking:
+    state_machine.check_transition(
+        state_machine.Context(
+            status=booking.status,
+            start_at=booking.start_at,
+            actor_role=actor_role(actor),
+            now=now,
+            cancellation_deadline_hours=business.cancellation_deadline_hours,
+            reason=reason,
+        ),
+        to_status,
+    )
+    from_status = booking.status
+    booking.status = to_status
+    fields = ["status", "updated_at"]
+    if to_status == Booking.Status.CANCELLED:
+        booking.cancelled_at = now
+        booking.cancelled_by = actor
+        booking.cancel_reason = reason
+        fields += ["cancelled_at", "cancelled_by", "cancel_reason"]
+    booking._status_change_allowed = True
+    booking.save(update_fields=fields)
+    _record(booking, from_status, to_status, actor, reason)
+    return booking
+
+
+@transaction.atomic
+def transition_booking(
+    *,
+    booking_id,
+    to_status: str,
+    actor: User | None,
+    reason: str = "",
+    now: datetime | None = None,
+) -> Booking:
+    """Move a booking to `to_status` on behalf of `actor` (None = the system)."""
+    # Row lock: two admins pressing "Confirm" at once are applied one after the other, and the
+    # second one is judged against the state the first one left behind (edge #23).
+    booking = Booking.objects.select_for_update().filter(pk=booking_id).first()
+    if booking is None or (actor is not None and not selectors.can_view(actor, booking)):
+        raise DomainError("NOT_FOUND", "Bron topilmadi.", 404)
+    return _apply(
+        booking,
+        to_status,
+        actor=actor,
+        reason=reason.strip(),
+        now=now or timezone.now(),
+        business=BusinessSettings.load(),
+    )

@@ -2,6 +2,8 @@ from datetime import datetime
 
 from django.db.models import QuerySet
 
+from apps.accounts.models import User
+
 from .models import ACTIVE_STATUSES, Booking
 
 
@@ -32,3 +34,26 @@ def booking_with_history(*, pk) -> Booking | None:
         .filter(pk=pk)
         .first()
     )
+
+
+def visible_bookings(user: User) -> QuerySet[Booking]:
+    """Bookings `user` may see; anything else is reported as 404, not 403 (no enumeration)."""
+    qs = Booking.objects.select_related("service", "provider", "customer")
+    if user.role == User.Role.ADMIN:
+        return qs
+    if user.role == User.Role.PROVIDER:
+        # A provider user without a linked Provider sees nothing (edge #35).
+        return qs.filter(provider__user=user)
+    return qs.filter(customer=user)
+
+
+def can_view(user: User, booking: Booking) -> bool:
+    if user.role == User.Role.ADMIN:
+        return True
+    if user.role == User.Role.PROVIDER:
+        return booking.provider.user_id == user.pk
+    return booking.customer_id == user.pk
+
+
+def visible_booking(user: User, pk) -> Booking | None:
+    return visible_bookings(user).prefetch_related("history__changed_by").filter(pk=pk).first()

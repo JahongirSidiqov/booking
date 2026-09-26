@@ -69,6 +69,13 @@ models/                            → maydonlar, constraint'lar, index'lar (man
 9. UI bosqichidan oldin `frontend-uiux-skill` va TASK.md 10-bo'lim o'qiladi.
 10. Bilmagan narsani o'ylab topma — `pip show` / docs tekshir yoki so'ra.
 
+## Konvensiyalar
+- O'zbekcha matnda `ʻ` (U+02BB: oʻ, gʻ) va `ʼ` (U+02BC: maʼlumot) ishlatiladi; ruff RUF001-003 shu sabab o'chirilgan.
+- API URL'lari oxirida `/` yo'q (`/api/v1/auth/token`).
+- API xatolari faqat `DomainError` yoki DRF exception orqali; javob shakli `apps/common/exceptions.py` da.
+- Bash heredoc'da `'` + `ʻ` aralash matn buziladi — Python fayllarni Write vositasi bilan yozish.
+- Bu mashinada Docker yo'q: dev/test bazasi lokal PostgreSQL 18, port 5433 (`.env` dagi `DATABASE_URL`).
+
 ## PowerShell buyruqlari
 ```powershell
 # Muhit

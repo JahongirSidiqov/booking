@@ -36,6 +36,31 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi bosqichlar bo'yicha qur
 
 ## 1-bosqich — Accounts + auth
 
+**Prompt (qisqacha):** "davom et" — 14-bo'lim, 1-bosqich (custom user, JWT, auth testlari).
+
+**Generatsiya qilindi:**
+- `apps/common`: `BaseModel` (UUID pk, created/updated), `DomainError`, RFC 9457 uslubidagi `problem_exception_handler`, `utils/time.py` (IANA tekshiruvi).
+- `apps/accounts`: `User` (email login, role, phone `+998…`, timezone), `UserManager` (email lowercase, case-insensitive login), DB CHECK'lar (email lowercase, role), admin formalari, `services.py` (register, profil, token oilasi).
+- `apps/api/v1`: `auth/register`, `auth/token`, `auth/token/refresh`, `auth/logout`, `me` (GET/PATCH); throttle'lar (anon 60, user 120, login 10/min IP bo'yicha).
+- Testlar: `tests/api/test_auth.py` (31), `tests/unit/test_user_model.py`, `tests/unit/test_time_utils.py`, `tests/test_admin.py`, `factories.py`, `conftest.py`.
+
+**Qanday tekshirildi:**
+- `pytest`: 50/50 yashil (lokal PostgreSQL 18). Qamrov: jami 90%, `accounts/services.py` 95%.
+- `ruff check`, `ruff format --check`, `makemigrations --check` — toza; dev bazaga `migrate` o'tdi.
+- simplejwt manba kodi o'qildi (`serializers.py`, `tokens.py`, `token_blacklist/models.py`): rotation va blacklist bor, lekin "token oilasi" yo'q.
+
+**Qarorlar:**
+- **Refresh token oilasi (TASK #30).** simplejwt eski refresh qayta ishlatilganda faqat shu so'rovni 401 qiladi. Login'da `fam` claim qo'shiladi (rotation'da saqlanadi); allaqachon blacklist qilingan, imzosi to'g'ri va muddati o'tmagan refresh kelsa — shu oiladagi barcha tirik tokenlar blacklist qilinadi. Boshqa qurilmadagi sessiya (boshqa oila) tegilmaydi — alohida test bor.
+- **Xato formati 7-bosqichdan oldinga surildi.** 14-bo'limda `problem-details error handler` 7-bosqichda, lekin 1-bosqich testlari 422/401 kodlarini tekshiradi. Keyin barcha testlarni qayta yozmaslik uchun handler hozir qurildi; 7-bosqichda `IntegrityError(exclusion)` va qolgan kodlar qo'shiladi.
+- Login xatosi 401 (DRF autentifikatorsiz view'da 403 ga tushiradi) — `WWW-Authenticate` sarlavhasi bilan.
+- Logout boshqa foydalanuvchining refresh tokenini qabul qilmaydi (401).
+- `pytest` dan `--no-migrations` olib tashlandi: 5-bosqichdagi `BtreeGistExtension` faqat migration orqali yaratiladi, testlar haqiqiy migration'larda ishlashi kerak.
+
+**AI xatolari:**
+- Bash heredoc ichida `'` va `ʻ` aralashgan matn bilan buyruq buzildi, hech bir fayl yozilmadi — fayllar Write vositasi bilan qayta yozildi.
+- `UserAttributeSimilarityValidator` default holatda `username/first_name/last_name/email` ni tekshiradi, `full_name` ni emas. AI buni birinchi yozishda o'tkazib yubordi; "Yangi Mijoz" ismli foydalanuvchi `yangi.mijoz` parolini qo'ya olardi. Test (`test_register_rejects_weak_password[yangi.mijoz]`) ushladi, `user_attributes=("email", "full_name")` qo'shildi.
+- ruff RUF001 o'zbekcha `ʻ`/`ʼ` harflarini "noaniq belgi" deb belgiladi. Bu TASK 10.1 talabi — qoida o'chirildi.
+
 ## 2-bosqich — Catalog + providers
 
 ## 3-bosqich — Scheduling

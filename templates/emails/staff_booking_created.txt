@@ -1,0 +1,12 @@
+{% autoescape off %}Yangi bron. {% if booking.status == "pending" %}Bron tasdiqlashingizni kutmoqda.{% else %}Bron avtomatik tasdiqlangan.{% endif %}
+
+Mijoz:  {{ booking.customer.full_name }}{% if booking.customer.phone %}, {{ booking.customer.phone }}{% endif %}
+Xizmat: {{ booking.service_name }}
+Sana:   {{ when.day }}
+Vaqt:   {{ when.time }} ({{ when.tz }}){% if booking.customer_note %}
+Izoh:   {{ booking.customer_note }}{% endif %}
+
+Bronni ochish: {{ link }}
+
+— {{ business.name }}
+{% endautoescape %}

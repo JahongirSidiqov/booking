@@ -1,0 +1,16 @@
+{% autoescape off %}Assalomu alaykum, {{ booking.customer.full_name }}!
+
+Bron qabul qilindi — tasdiqlashni kuting. Xodim bronni tasdiqlagach, sizga yana xat keladi.
+
+Xizmat: {{ booking.service_name }}
+Xodim:  {{ booking.provider.name }}
+Sana:   {{ when.day }}
+Vaqt:   {{ when.time }} ({{ when.tz }})
+Narx:   {{ price }}
+
+Bronni koʻrish: {{ link }}
+
+Rejalar oʻzgarsa, uchrashuvdan {{ deadline_hours }} soat oldingacha bronni bepul bekor qilishingiz mumkin.
+
+— {{ business.name }}
+{% endautoescape %}

@@ -1,0 +1,16 @@
+{% autoescape off %}{{ booking.customer.full_name }}, bron tasdiqlandi!
+
+Sizni {{ when.day }} kuni soat {{ when.time|slice:":5" }} da kutamiz.
+
+Xizmat: {{ booking.service_name }}
+Xodim:  {{ booking.provider.name }}
+Sana:   {{ when.day }}
+Vaqt:   {{ when.time }} ({{ when.tz }})
+Narx:   {{ price }}
+
+Bronni koʻrish: {{ link }}
+
+Bekor qilish uchrashuvdan {{ deadline_hours }} soat oldingacha bepul.
+
+— {{ business.name }}
+{% endautoescape %}

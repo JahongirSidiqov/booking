@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "apps.providers",
     "apps.scheduling",
     "apps.bookings",
+    "apps.notifications",
     "apps.web",
 ]
 
@@ -108,6 +109,8 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Navbat <no-reply@navbat.uz>")
+# Absolute links in emails (there is no request when an on_commit hook runs).
+SITE_URL = env("SITE_URL", default="http://localhost:8000").rstrip("/")
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [

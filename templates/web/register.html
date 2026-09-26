@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Roʻyxatdan oʻtish{% endblock %}
+{% block main_class %}mx-auto w-full max-w-[440px] px-4 py-10 md:py-16{% endblock %}
+{% block content %}
+<h1 class="text-2xl">Roʻyxatdan oʻtish</h1>
+<p class="mt-2 text-muted">Bir daqiqa — keyin bron qilishingiz mumkin.</p>
+<form method="post" class="mt-6 flex flex-col gap-4" x-data="{ busy: false }" @submit="busy = true" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  {% include "components/form_errors.html" %}
+  {% include "components/field.html" with field=form.full_name %}
+  {% include "components/field.html" with field=form.email %}
+  {% include "components/field.html" with field=form.phone %}
+  {% include "components/field.html" with field=form.password %}
+  <button type="submit" class="btn btn-primary btn-lg btn-block" x-bind:disabled="busy">Akkaunt yaratish</button>
+</form>
+<p class="mt-6 text-center text-sm text-muted">
+  Akkauntingiz bormi? <a class="font-medium text-primary underline" href="{% url 'web:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Kirish</a>
+</p>
+{% endblock %}

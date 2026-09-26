@@ -7,6 +7,7 @@ urlpatterns = [
     path("api/v1/", include("apps.api.v1.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger"),
+    path("", include("apps.web.urls")),
 ]
 
 handler404 = "apps.common.views.not_found"

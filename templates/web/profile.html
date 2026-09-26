@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load navbat %}
+{% block title %}Profil{% endblock %}
+{% block main_class %}mx-auto w-full max-w-[560px] px-4 py-6 md:py-10{% endblock %}
+{% block content %}
+<h1 class="text-2xl md:text-3xl">Profil</h1>
+<p class="mt-1 text-muted">{{ user.email }}</p>
+<form method="post" class="card mt-6 flex flex-col gap-4 p-5" x-data="{ busy: false }" @submit="busy = true" novalidate>
+  {% csrf_token %}
+  {% include "components/form_errors.html" %}
+  {% include "components/field.html" with field=form.full_name %}
+  {% include "components/field.html" with field=form.phone %}
+  {% include "components/field.html" with field=form.timezone %}
+  <button type="submit" class="btn btn-primary btn-block" x-bind:disabled="busy">Oʻzgarishlarni saqlash</button>
+</form>
+<form method="post" action="{% url 'web:logout' %}" class="mt-4">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-ghost btn-block">{% icon "log-out" 18 %}Chiqish</button>
+</form>
+{% endblock %}

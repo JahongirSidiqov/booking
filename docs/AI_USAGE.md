@@ -144,6 +144,39 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi bosqichlar bo'yicha qur
 
 ## 5-bosqich — Booking create + concurrency
 
+**Prompt (qisqacha):** "davom et" — 5-bosqich (booking modeli, exclusion constraint'lar, `create_booking` provider lock bilan, idempotency, concurrency testi, ADR-003).
+
+**Generatsiya qilindi:**
+- `bookings.Booking` — snapshot maydonlar, `PROTECT`, 2 ta `ExclusionConstraint` (`[)`, faqat `pending|confirmed`), idempotency unique, CHECK'lar, 3 ta index. `BookingStatusHistory` — append-only (model va queryset darajasida update/delete taqiqlangan). Migratsiyaga `BtreeGistExtension()` qo'lda birinchi qo'shildi.
+- `slot_engine.slot_rejection` — aniq vaqt uchun rad sababi; hukm `get_available_slots` ning o'zidan (bitta haqiqat manbai).
+- `bookings/services.create_booking` — provider lock → idempotency (lock ichida) → `bookable_pair` → engine → mijoz kesishuvi → insert → history; `IntegrityError` constraint nomi bo'yicha 409; `auto_confirm` (edge #36).
+- `POST /api/v1/bookings` (faqat `customer`, `Idempotency-Key`, 10/min throttle), javob TASK 6.4 shaklida. Slots API endi band vaqtlarni ayiradi. `DELETE /services|providers/{id}` endi 200 + kelgusi bronlar ro'yxati (edge #25).
+- Django admin'da bron faqat o'qish uchun (status service'dan tashqarida o'zgarmasin).
+- ADR-003, ADR-008.
+- Testlar: `test_bookings.py` (35 — edge #2–#12, #17, #24, #25, #31, #32, #36), `test_booking_constraints.py` (10), `test_booking_service.py` (3), `tests/concurrency/test_double_booking.py` (5), `slot_rejection` unit testlari (11), admin testi.
+
+**Qanday tekshirildi:**
+- `pytest` 281/281; qamrov jami 98%, `bookings/services.py` va `slot_engine.py` 100%.
+- Concurrency: 10 thread `threading.Barrier` bilan haqiqiy PostgreSQL'da → 1×201, 9×409.
+- **Ikki qatlam haqiqatan ishlashini o'lchash:** vaqtincha probe test (keyin o'chirildi) constraint'ga yetgan yutqazuvchilarni sanadi, 3 marta: lock bilan 0/9, lock'siz 1–2/9. Ya'ni lock poygani tartibga soladi, lock'siz esa constraint haqiqatan oxirgi qalqon. Bu sonni assert qilmadim — thread vaqtiga bog'liq, test beqaror bo'lardi.
+- Bir xil kalit bilan 5 parallel retry → 1×201 + 4×200 replay.
+
+**Qarorlar:**
+- Idempotency tekshiruvi lock ichida (aks holda parallel double-click ikkinchi so'rovga `SLOT_TAKEN` berardi).
+- Bir xil kalit + boshqa payload → sha256 fingerprint orqali `409 IDEMPOTENCY_MISMATCH`; kalit mijoz bo'yicha.
+- `BookingStatusHistory` hozir qo'shildi (14-bo'limda 6-bosqichda) — bron yaratish oqimi (3.3, 10-qadam) va javob shakli (6.4) history'ni talab qiladi. 6-bosqichda holat o'tishlari shu jadvalga yoziladi.
+- `auto_confirm` hozircha `create_booking` ichida to'g'ridan-to'g'ri; 6-bosqichda umumiy `transition_booking` ga o'tkaziladi.
+- Bron ro'yxati/tafsiloti (`GET /bookings`) 6–7-bosqichlarda.
+
+**AI xatolari:**
+- `django.utils.timezone.UTC` ishlatilgan — bunday atribut yo'q (Django 5 da `timezone.utc` ham olib tashlangan). Birinchi ishga tushirishdan oldin kodni o'qib topildi, `datetime.UTC` ga o'zgartirildi.
+- `_replay` `None` qaytarishi mumkin bo'lgan yo'lda natija tekshirilmagan edi — tuzatildi.
+- Skriptli qidir-almashtir o'z oldingi almashtirishiga qoqilib, fayl yozilmadi — fayl butunlay qayta yozildi.
+- **freezegun + DRF throttle:** 31 test `TypeError: fake_time() takes 0 positional arguments` bilan yiqildi. Sabab: `SimpleRateThrottle.timer = time.time` klass yaratilganda saqlanadi; modul birinchi marta freezegun bloki ichida import qilinsa, soxta funksiya klass atributiga tushib, metod sifatida bog'lanadi. `tests/conftest.py` da modul oldindan import qilinadi (izoh bilan).
+- Test yordamchi funksiyasi `customer_client()` pytest fixture nomini soya qilib qo'ygan — `new_customer()` ga o'zgartirildi.
+- `Booking.is_active` property ishlatilmagan — qamrov hisobotida ko'rinib, olib tashlandi.
+- Soxta `IntegrityError.__cause__` uchun `SimpleNamespace` ishlatilgan — Python faqat exception qabul qiladi; kichik exception klassi bilan almashtirildi.
+
 ## 6-bosqich — State machine
 
 ## 7-bosqich — API polish

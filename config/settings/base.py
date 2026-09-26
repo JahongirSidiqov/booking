@@ -57,6 +57,10 @@ TEMPLATES = [
 DATABASES = {"default": env.db("DATABASE_URL")}
 DATABASES["default"]["ATOMIC_REQUESTS"] = False
 DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)
+# Without a timeout an unreachable DB makes manage.py and pytest hang instead of failing.
+DATABASES["default"].setdefault("OPTIONS", {}).setdefault(
+    "connect_timeout", env.int("DB_CONNECT_TIMEOUT", default=5)
+)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

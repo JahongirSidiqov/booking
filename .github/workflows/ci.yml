@@ -23,7 +23,8 @@ jobs:
           curl -sSfL -o /usr/local/bin/tailwindcss \
             https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.3/tailwindcss-linux-x64
           chmod +x /usr/local/bin/tailwindcss
-          tailwindcss -i assets/css/app.css -o /tmp/app.css --minify
+          # Same stdout path as scripts/build-css.ps1: stdout ends with a newline, `-o` does not.
+          tailwindcss -i assets/css/app.css --minify > /tmp/app.css
           diff -q static/css/app.css /tmp/app.css || {
             echo "static/css/app.css is stale: run scripts/build-css.ps1 and commit it"; exit 1; }
 

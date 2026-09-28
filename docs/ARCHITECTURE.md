@@ -66,6 +66,21 @@ POST /api/v1/bookings  {service_id, provider_id, start_at(+offset), note}  [Idem
 
 Nega lock **va** constraint (ADR-003): lock poygani tartibga soladi — ikkinchi so'rov kutadi, keyin g'olibning qatorini ko'rib odatdagi `409` oladi. Constraint esa lock'ni chetlab o'tgan har qanday yo'lni (admin, shell, kelajakdagi bug, turli xodimlarga bir vaqtda yozilayotgan bitta mijoz) to'xtatadi. O'lchov: 10 parallel so'rovda lock bilan 0 ta yutqazuvchi constraint'gacha yetdi, lock'siz 1–2 tasi yetdi va faqat constraint to'xtatdi.
 
+### "Istalgan xodim" (ADR-011)
+
+```
+POST /api/v1/bookings  {service_id, provider_id: null | yo'q, start_at}
+  ▼ services.create_booking_any
+     1. idempotency izi provider="any" bilan → replay bo'lsa shu yerda qaytadi
+     2. nomzodlar: xizmatni ko'rsatadigan faol xodimlar, shu kundagi faol bronlar soni ↑, ism, id
+     3. har nomzod: create_booking(...)   ← o'z tranzaksiyasi, bitta xodim lock'i (deadlock yo'q)
+          SLOT_TAKEN / SLOT_UNAVAILABLE / STEP_MISALIGNED → keyingi nomzod
+          boshqa xato (IN_PAST, CUSTOMER_OVERLAP, ...) → darhol qaytariladi
+     4. hech kim olmadi → SLOT_TAKEN > SLOT_UNAVAILABLE > STEP_MISALIGNED
+```
+
+Slotlar: `?provider=any` — har xodim slotlari `slot_engine.union_slots` bilan birlashtiriladi; kunlik son birlashma bo'yicha.
+
 ## 3. Ma'lumotlar bazasi
 
 ```

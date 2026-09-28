@@ -407,6 +407,23 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi 13 bosqich (0–12) bo'
 - Bash heredoc yana `'` + `ʻ` aralash matnda buzildi — tahrir skripti fayl sifatida yozilib ishga tushirildi.
 - Apostrof testi inglizcha izohdagi "booking's" ni o'zbekcha xato deb ushladi (testning o'zidagi noto'g'ri musbat) — naqsh so'z oxiridagi `'s` ni chetlab o'tadigan qilindi va naqshning o'ziga test qo'shildi. Shu tahrirda `\b` yana backspace belgisiga aylandi — boshqaruv belgilari testi darhol ushladi.
 
+## Bonus 3 — "Istalgan xodim"
+
+**Prompt (qisqacha):** "davom et" — TASK bonuslari tartibida oxirgisi.
+
+**Generatsiya qilindi:**
+- `slot_engine.union_slots`, `scheduling.selectors.any_provider_day_slots` / `any_provider_days_summary` / `offering_providers` / `bookable_service`, `bookings.selectors.provider_load`.
+- `services.create_booking_any`: shu kundagi yuk bo'yicha tartiblangan nomzodlar, har biriga oddiy `create_booking` (bitta lock), xodimga xos rad etishda keyingisi; idempotency izi `"any"` bilan (`create_booking(payload_hash=...)`).
+- API: `provider=any` (slots/days, javobda `provider: null`), `POST /bookings` da `provider_id` ixtiyoriy. Web: "Istalgan xodim" kartasi (xodim > 1 bo'lsa), tasdiq sahifasida izoh, band bo'lsa `provider=any` bilan qaytish.
+- ADR-011; testlar: `tests/api/test_any_provider.py` (17) va parallel test (4 mijoz, 3 xodim).
+
+**Qanday tekshirildi:** `pytest` 626/626; OpenAPI `--fail-on-warn` toza; `ruff` toza. Mutatsion tekshiruv: `create_booking` ga `payload_hash` uzatilmasa (iz tayinlangan xodim bilan hisoblansa) → `test_idempotent_retry_returns_same_provider` yiqiladi; qaytarilgach o'tadi.
+
+**Qarorlar:** tasodifiy yoki round-robin emas — holatsiz "eng kam band" (deterministik, testlanadi); hamma xodimni bir vaqtda qulflash emas — ketma-ket urinishlar (deadlock yo'q); umumiy qoida xatolari boshqa xodimda takrorlanmaydi.
+
+**AI xatolari:**
+- Tahrir skriptlari yana Bash heredoc o'rniga fayl sifatida yozildi (`'` + `ʻ` aralash matn).
+
 ## Nimani o'zim yozdim / o'zgartirdim
 
 Rostini aytganda: **ilova kodining deyarli hammasini AI yozdi.** Bu sessiyada kuzatilgan inson hissasi:
@@ -425,9 +442,9 @@ Keyin kodni qo'lda o'zgartirsangiz, shu bo'limga nimani va nega o'zgartirganingi
 | Ko'rsatkich | Qiymat |
 |---|---|
 | Bosqichlar | 13 (0–12), har biri alohida tasdiqlangan |
-| Testlar | 608 (unit, API, web, concurrency, email, e2e) — hammasi yashil |
+| Testlar | 626 (unit, API, web, concurrency, email, e2e) — hammasi yashil |
 | Qamrov | ~98% |
 | TASK 8-bo'limdagi holatlar | 38/38, har biri nomli test bilan |
-| ADR | 10 (001–010) |
+| ADR | 11 (001–011) |
 | Faqat brauzer/skrinshot topgan xatolar | 8 ta (fieldset kengligi, sana chizig'i, skeleton bo'shlig'i, CSS'dagi vergulli foizlar, dialog o'zi yopilishi, navbar 2px, tashqi shrift timeout'i, tahrirlashdagi ASCII belgilari) |
 | Tekshirilmagan | Docker image build va `docker compose` (mashinada Docker yo'q) — CI'dagi `compose-smoke` job'i birinchi push'da tekshiradi; haqiqiy SMTP va deploy |

@@ -128,6 +128,20 @@ Testlar: `test_edge_34_duration_45_step_15_next_slot_after_booking`, `test_durat
 | Mijoz tanaffus paytida boshqa xodimga yoziladi | Ruxsat — mijoz constraint'i `end_at` bo'yicha | `test_customer_is_not_blocked_by_buffer` |
 | Xizmat tanaffusi keyin o'zgartirildi | Eski bronning `blocked_until` i o'zgarmaydi (snapshot) | `test_booking_snapshots_buffer_and_customer_sees_plain_times` |
 
+## Istalgan xodim (bonus, ADR-011)
+
+| Holat | Natija | Test |
+|---|---|---|
+| 09:00 ni ikki xodim band qilgan, uchinchisi 10:00 dan ishlaydi | `provider=any` slotlari 09:30 dan boshlanadi, takrorsiz | `test_slots_api_any_is_union` |
+| Kunlik son | Birlashma (35), yig'indi emas | `test_days_api_any_counts_union_not_sum` |
+| Bir xodimning shu kuni broni bor | Boshqa (kam band) xodim tayinlanadi, teng bo'lsa ism bo'yicha | `test_least_busy_provider_is_chosen_ties_by_name` |
+| Birinchi tanlov band | Keyingi nomzodga yoziladi | `test_falls_back_when_first_choice_is_taken` |
+| Hamma band yoki ishlamaydi | `409 SLOT_TAKEN` (kimdir band qilgan bo'lsa), aks holda `422 SLOT_UNAVAILABLE` | `test_provider_who_does_not_work_then_is_skipped`, `test_nobody_works_then_is_slot_unavailable` |
+| O'tgan vaqt / mijozning o'zi band | Boshqa xodimlarda qayta urinilmaydi, darhol xato | `test_general_rule_fails_fast_without_trying_everyone`, `test_customer_overlap_is_not_retried_on_other_providers` |
+| Qayta urinish (xuddi shu kalit), yuk o'zgargan | O'sha bron va o'sha xodim; boshqa payload → `409 IDEMPOTENCY_MISMATCH` | `test_idempotent_retry_returns_same_provider` |
+| 4 mijoz bir vaqtda "istalgan", 3 xodim | 3 × 201 (3 xil xodim), 1 × 409 | `test_any_provider_parallel_bookings_spread_over_free_providers` |
+| Xizmatni bitta xodim ko'rsatadi | "Istalgan xodim" kartasi ko'rsatilmaydi | `test_any_option_hidden_when_only_one_provider` |
+
 ## Ko'lamdan tashqari (ongli ravishda)
 
 - Yarim tundan o'tuvchi smena — ADR-004.

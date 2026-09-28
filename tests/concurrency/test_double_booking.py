@@ -162,3 +162,19 @@ def test_edge_23_two_admins_confirm_at_once(scenario):
 
     assert sorted(results) == [(200, "confirmed"), (409, "INVALID_TRANSITION")], results
     assert booking.history.count() == 2
+
+
+def test_any_provider_parallel_bookings_spread_over_free_providers(scenario):
+    """Three barbers, four customers asking for "any" at the same moment: 3 × 201, 1 × 409."""
+    haircut, _sardor = scenario
+    others = [ProviderFactory(with_services=[haircut]) for _ in range(2)]
+    for provider in others:
+        AvailabilityRuleFactory(provider=provider, weekday=3, start_time=time(9), end_time=time(18))
+    body = {"service_id": str(haircut.pk), "start_at": SLOT_0900}
+    customers = [UserFactory(role=User.Role.CUSTOMER) for _ in range(4)]
+
+    results = run_parallel([post_as(c, body) for c in customers])
+
+    assert Counter(status for status, _ in results) == {201: 3, 409: 1}, results
+    assert Booking.objects.count() == 3
+    assert Booking.objects.values("provider").distinct().count() == 3

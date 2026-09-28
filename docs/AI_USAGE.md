@@ -424,6 +424,12 @@ Loyiha Claude Code (Claude Opus) yordamida, TASK.md dagi 13 bosqich (0–12) bo'
 **AI xatolari:**
 - Tahrir skriptlari yana Bash heredoc o'rniga fayl sifatida yozildi (`'` + `ʻ` aralash matn).
 
+## Birinchi CI ishga tushishi
+
+**Natija:** foydalanuvchi GitHub'ga push qildi; `lint` job'idagi "Committed CSS matches the templates" qadami yiqildi, qolgan job'lar shu sababli ishlamadi.
+
+**AI xatosi:** CSS tekshiruvi CI'da `tailwindcss -o` bilan yozilgan, lokal `scripts/build-css.ps1` esa (OneDrive'dagi EEXIST sababli) stdout orqali yig'adi. Stdout natijasi oxirida `\n` bor, `-o` natijasida yo'q — 37 396 bayt bir xil, farq faqat oxirgi baytda. Tekshiruv push'dan oldin hech qachon ishga tushirilmagan edi. Loglar login talab qilgani uchun sabab lokal takrorlandi (`-o` va stdout build'ni committed fayl bilan `cmp`), CI ham stdout yo'liga o'tkazildi.
+
 ## Nimani o'zim yozdim / o'zgartirdim
 
 Rostini aytganda: **ilova kodining deyarli hammasini AI yozdi.** Bu sessiyada kuzatilgan inson hissasi:

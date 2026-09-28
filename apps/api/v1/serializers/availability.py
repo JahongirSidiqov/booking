@@ -7,9 +7,21 @@ from apps.common.utils.time import validate_timezone
 # --- query parameters ---------------------------------------------------------------------
 
 
+class ProviderOrAnyField(serializers.CharField):
+    """A provider UUID, or "any" (returned as None) for the union of all providers."""
+
+    def to_internal_value(self, data):
+        value = super().to_internal_value(data)
+        if value == "any":
+            return None
+        return serializers.UUIDField().to_internal_value(value)
+
+
 class _SlotQueryBase(serializers.Serializer):
     service = serializers.UUIDField()
-    provider = serializers.UUIDField()
+    provider = ProviderOrAnyField(
+        help_text="Xodim UUID yoki `any` — xizmatni koʻrsatadigan barcha xodimlar birlashmasi."
+    )
     tz = serializers.CharField(
         max_length=64,
         required=False,
@@ -66,7 +78,7 @@ class SlotsResponseSerializer(serializers.Serializer):
     date = serializers.DateField()
     timezone = serializers.CharField()
     service = ServiceBriefSerializer()
-    provider = ProviderBriefSerializer()
+    provider = ProviderBriefSerializer(allow_null=True, help_text="`provider=any` da null.")
     slots = SlotSerializer(many=True)
 
 
@@ -78,7 +90,7 @@ class DayCountSerializer(serializers.Serializer):
 class DaysResponseSerializer(serializers.Serializer):
     timezone = serializers.CharField()
     service = ServiceBriefSerializer()
-    provider = ProviderBriefSerializer()
+    provider = ProviderBriefSerializer(allow_null=True)
     days = DayCountSerializer(many=True)
 
     def get_fields(self):

@@ -9,6 +9,17 @@
     <legend class="text-lg font-semibold">Xodimni tanlang</legend>
     {% if providers %}
       <div class="mt-4 flex flex-col gap-3">
+        {% if providers|length > 1 %}
+          <label class="card flex cursor-pointer items-center gap-4 p-4 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary-soft has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary">
+            <input type="radio" name="provider" value="any" class="sr-only" x-model="chosen" required>
+            <span class="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary" aria-hidden="true">{% icon "calendar-check" 22 %}</span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-semibold">Istalgan xodim</span>
+              <span class="block text-sm text-muted">Eng koʻp boʻsh vaqt — tizim boʻsh xodimni tanlaydi</span>
+            </span>
+            <span class="text-primary" x-show="chosen === 'any'" x-cloak>{% icon "circle-check" 22 %}</span>
+          </label>
+        {% endif %}
         {% for provider in providers %}
           <label class="card flex cursor-pointer items-center gap-4 p-4 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary-soft has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary">
             <input type="radio" name="provider" value="{{ provider.pk }}" class="sr-only" x-model="chosen" required>

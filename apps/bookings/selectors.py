@@ -133,3 +133,14 @@ def upcoming_counts(field: str, *, now: datetime) -> dict:
         .values_list(field, "n")
     )
     return dict(rows)
+
+
+def provider_load(*, provider_ids, start: datetime, end: datetime) -> dict:
+    """Active bookings per provider in [start, end) — used to spread "any provider" bookings."""
+    rows = (
+        active_overlapping(provider_id__in=provider_ids, start_at__lt=end, end_at__gt=start)
+        .values("provider_id")
+        .annotate(n=Count("id"))
+        .values_list("provider_id", "n")
+    )
+    return dict(rows)

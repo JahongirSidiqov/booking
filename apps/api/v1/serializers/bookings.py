@@ -32,7 +32,11 @@ def validate_idempotency_key(raw: str | None) -> str | None:
 
 class BookingCreateSerializer(serializers.Serializer):
     service_id = serializers.UUIDField()
-    provider_id = serializers.UUIDField()
+    provider_id = serializers.UUIDField(
+        required=False,
+        allow_null=True,
+        help_text="Boʻlmasa yoki null — istalgan boʻsh xodim (oʻsha kuni eng kam band).",
+    )
     start_at = AwareDateTimeField(help_text="ISO 8601, offset majburiy: 2026-10-01T09:00:00+05:00")
     note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
 

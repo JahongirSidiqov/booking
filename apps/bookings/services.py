@@ -4,6 +4,7 @@ import hashlib
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from functools import partial
+from zoneinfo import ZoneInfo
 
 from django.db import IntegrityError, transaction
 from django.utils import timezone
@@ -100,9 +101,10 @@ def create_booking(
     note: str = "",
     idempotency_key: str | None = None,
     now: datetime | None = None,
+    payload_hash: str | None = None,
 ) -> CreateResult:
     now = now or timezone.now()
-    payload_hash = fingerprint(
+    payload_hash = payload_hash or fingerprint(
         service_id=service_id, provider_id=provider_id, start_at=start_at, note=note
     )
     try:
@@ -296,3 +298,69 @@ def expire_stale_bookings(*, now: datetime | None = None) -> int:
             )
             expired += 1
     return expired
+
+
+ANY_PROVIDER = "any"
+# Rejections that depend on the provider: try the next candidate. Everything else (past,
+# lead time, too far ahead, the customer's own overlap) would fail for every provider.
+PROVIDER_SPECIFIC = ("SLOT_TAKEN", "SLOT_UNAVAILABLE", "STEP_MISALIGNED")
+
+
+def create_booking_any(
+    *,
+    customer: User,
+    service_id,
+    start_at: datetime,
+    note: str = "",
+    idempotency_key: str | None = None,
+    now: datetime | None = None,
+) -> CreateResult:
+    """Book `start_at` with whichever provider is free, least busy that day first.
+
+    Each attempt is a normal create_booking (its own transaction and provider lock), so no
+    two provider locks are ever held at once and no deadlock is possible; the exclusion
+    constraints still guard every attempt.
+    """
+    now = now or timezone.now()
+    service = scheduling_selectors.bookable_service(service_id=service_id)
+    # Fingerprint on "any", not on the provider that ends up assigned: a retry must replay
+    # the same booking even if a different provider would be picked this time.
+    payload_hash = fingerprint(
+        service_id=service_id, provider_id=ANY_PROVIDER, start_at=start_at, note=note
+    )
+    if idempotency_key:
+        replay = _replay(customer, idempotency_key, payload_hash)
+        if replay is not None:
+            return replay
+
+    candidates = scheduling_selectors.offering_providers(service=service)
+    if not candidates:
+        raise slot_error("SLOT_UNAVAILABLE")
+    business = BusinessSettings.load()
+    day_start, day_end = slot_engine.local_day_bounds(
+        start_at.astimezone(ZoneInfo(business.timezone)).date(), business.timezone
+    )
+    load = selectors.provider_load(
+        provider_ids=[p.pk for p in candidates], start=day_start, end=day_end
+    )
+    candidates.sort(key=lambda p: (load.get(p.pk, 0), p.name, str(p.pk)))
+
+    refused = set()
+    for provider in candidates:
+        try:
+            return create_booking(
+                customer=customer,
+                service_id=service.pk,
+                provider_id=provider.pk,
+                start_at=start_at,
+                note=note,
+                idempotency_key=idempotency_key,
+                now=now,
+                payload_hash=payload_hash,
+            )
+        except DomainError as exc:
+            if exc.code not in PROVIDER_SPECIFIC:
+                raise
+            refused.add(exc.code)
+    # Report the most useful reason: someone took it > nobody works then > off-grid.
+    raise slot_error(next(code for code in PROVIDER_SPECIFIC if code in refused))

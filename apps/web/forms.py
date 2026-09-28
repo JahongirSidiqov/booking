@@ -1,4 +1,5 @@
 import re
+import uuid
 from zoneinfo import available_timezones
 
 from django import forms
@@ -118,7 +119,8 @@ class ProfileForm(StyledFormMixin, forms.Form):
 
 
 class BookingConfirmForm(StyledFormMixin, forms.Form):
-    provider = forms.UUIDField(widget=forms.HiddenInput)
+    # A provider UUID, or "any" (cleaned to None): let the system pick a free provider.
+    provider = forms.CharField(widget=forms.HiddenInput, max_length=36)
     start_at = forms.CharField(widget=forms.HiddenInput)
     idempotency_key = forms.CharField(widget=forms.HiddenInput, max_length=64)
     note = forms.CharField(
@@ -127,6 +129,15 @@ class BookingConfirmForm(StyledFormMixin, forms.Form):
         max_length=500,
         widget=forms.Textarea(attrs={"rows": 3, "maxlength": 500}),
     )
+
+    def clean_provider(self):
+        raw = self.cleaned_data["provider"]
+        if raw == "any":
+            return None
+        try:
+            return uuid.UUID(raw)
+        except ValueError as exc:
+            raise forms.ValidationError("Xodim notoʻgʻri.") from exc
 
     def clean_start_at(self):
         raw = self.cleaned_data["start_at"]

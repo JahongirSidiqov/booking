@@ -314,3 +314,8 @@ def get_day_summary(
         summary.append((day, len(slots)))
         day += timedelta(days=1)
     return summary
+
+
+def union_slots(slot_lists: Iterable[Iterable[Slot]]) -> list[Slot]:
+    """Slots offered by at least one provider ("any provider"), each start listed once."""
+    return sorted({slot for slots in slot_lists for slot in slots})

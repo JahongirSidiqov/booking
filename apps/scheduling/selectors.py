@@ -5,6 +5,7 @@ from django.db.models import QuerySet
 from apps.bookings import selectors as booking_selectors
 from apps.catalog.models import Service
 from apps.common.exceptions import DomainError
+from apps.providers import selectors as provider_selectors
 from apps.providers.models import Provider, ProviderService
 
 from . import slot_engine
@@ -102,3 +103,52 @@ def days_summary(
         tz=tz,
         **engine_inputs(provider, date_from, date_to),
     )
+
+
+def offering_providers(*, service: Service) -> list[Provider]:
+    """Active providers who offer an active `service` (the "any provider" candidates)."""
+    return list(provider_selectors.provider_list(service_id=service.pk))
+
+
+def any_provider_day_slots(
+    *, service: Service, date_local: date, tz: str, now: datetime
+) -> list[slot_engine.Slot]:
+    return slot_engine.union_slots(
+        day_slots(service=service, provider=p, date_local=date_local, tz=tz, now=now)
+        for p in offering_providers(service=service)
+    )
+
+
+def any_provider_days_summary(
+    *, service: Service, date_from: date, date_to: date, tz: str, now: datetime
+) -> list[tuple[date, int]]:
+    """Free starts per day across all providers — a union, so counts are not summed."""
+    slot_engine.validate_range(date_from, date_to)
+    providers = offering_providers(service=service)
+    inputs = {p.pk: engine_inputs(p, date_from, date_to) for p in providers}
+    summary = []
+    day = date_from
+    while day <= date_to:
+        per_provider = (
+            slot_engine.get_available_slots(
+                service=service, provider=p, date_local=day, now=now, tz=tz, **inputs[p.pk]
+            )
+            for p in providers
+        )
+        summary.append((day, len(slot_engine.union_slots(per_provider))))
+        day += timedelta(days=1)
+    return summary
+
+
+def bookable_service(*, service_id) -> Service:
+    """The service half of bookable_pair, for bookings without a chosen provider."""
+    service = Service.objects.filter(pk=service_id).first()
+    if service is None:
+        raise DomainError("NOT_FOUND", "Xizmat topilmadi.", 404)
+    if not service.is_active:
+        raise DomainError(
+            "INACTIVE_RESOURCE",
+            "Bu xizmat hozir bron qabul qilmaydi.",
+            title="Faol emas",
+        )
+    return service

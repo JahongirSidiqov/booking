@@ -7,7 +7,7 @@
 <h2 class="text-lg font-semibold">Bronni tekshiring</h2>
 <dl class="card mt-4 divide-y divide-border">
   <div class="flex justify-between gap-4 p-4"><dt class="text-muted">Xizmat</dt><dd class="text-right font-medium">{{ service.name }}</dd></div>
-  <div class="flex justify-between gap-4 p-4"><dt class="text-muted">Xodim</dt><dd class="text-right font-medium">{{ provider.name }}</dd></div>
+  <div class="flex justify-between gap-4 p-4"><dt class="text-muted">Xodim</dt><dd class="text-right font-medium">{{ provider.name }}{% if provider.is_any %}<span class="block text-sm font-normal text-muted">tasdiqlashda tizim tanlaydi</span>{% endif %}</dd></div>
   <div class="flex justify-between gap-4 p-4"><dt class="text-muted">Sana</dt><dd class="text-right font-medium">{{ start_at|local_long_day:display_tz }}</dd></div>
   <div class="flex justify-between gap-4 p-4"><dt class="text-muted">Vaqt</dt><dd class="text-right font-medium tabular-nums">{{ start_at|local_time:display_tz }}–{{ end_at|local_time:display_tz }}</dd></div>
   <div class="flex justify-between gap-4 p-4"><dt class="text-muted">Narx</dt><dd class="text-right font-semibold tabular-nums">{{ service.price|money:business.currency }}</dd></div>

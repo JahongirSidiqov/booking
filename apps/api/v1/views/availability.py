@@ -45,16 +45,22 @@ class SlotsView(APIView):
         query.is_valid(raise_exception=True)
         params = query.validated_data
         tz = resolve_tz(request, params.get("tz"))
-        service, provider = selectors.bookable_pair(
-            service_id=params["service"], provider_id=params["provider"]
-        )
-        slots = selectors.day_slots(
-            service=service,
-            provider=provider,
-            date_local=params["date"],
-            tz=tz,
-            now=timezone.now(),
-        )
+        if params["provider"] is None:
+            service, provider = selectors.bookable_service(service_id=params["service"]), None
+            slots = selectors.any_provider_day_slots(
+                service=service, date_local=params["date"], tz=tz, now=timezone.now()
+            )
+        else:
+            service, provider = selectors.bookable_pair(
+                service_id=params["service"], provider_id=params["provider"]
+            )
+            slots = selectors.day_slots(
+                service=service,
+                provider=provider,
+                date_local=params["date"],
+                tz=tz,
+                now=timezone.now(),
+            )
         data = {
             "date": params["date"],
             "timezone": tz,
@@ -83,17 +89,20 @@ class DaysView(APIView):
         query.is_valid(raise_exception=True)
         params = query.validated_data
         tz = resolve_tz(request, params.get("tz"))
-        service, provider = selectors.bookable_pair(
-            service_id=params["service"], provider_id=params["provider"]
-        )
-        summary = selectors.days_summary(
-            service=service,
-            provider=provider,
-            date_from=params["from"],
-            date_to=params["to"],
-            tz=tz,
-            now=timezone.now(),
-        )
+        common = {
+            "date_from": params["from"],
+            "date_to": params["to"],
+            "tz": tz,
+            "now": timezone.now(),
+        }
+        if params["provider"] is None:
+            service, provider = selectors.bookable_service(service_id=params["service"]), None
+            summary = selectors.any_provider_days_summary(service=service, **common)
+        else:
+            service, provider = selectors.bookable_pair(
+                service_id=params["service"], provider_id=params["provider"]
+            )
+            summary = selectors.days_summary(service=service, provider=provider, **common)
         data = {
             "date_from": params["from"],
             "date_to": params["to"],

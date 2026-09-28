@@ -70,7 +70,8 @@ def _transition_schema(summary: str, description: str, extra_errors=None):
     ),
     create=extend_schema(
         summary="Bron yaratish (mijoz)",
-        description="Double booking DB darajasida taqiqlangan (ADR-003). `Idempotency-Key` bilan "
+        description="`provider_id` boʻlmasa — istalgan boʻsh xodim tayinlanadi (ADR-011). "
+        "Double booking DB darajasida taqiqlangan (ADR-003). `Idempotency-Key` bilan "
         "takroriy soʻrov oʻsha bronni `200` + `Idempotent-Replayed: true` bilan qaytaradi.",
         parameters=[
             OpenApiParameter(
@@ -178,14 +179,17 @@ class BookingViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         key = validate_idempotency_key(request.headers.get("Idempotency-Key"))
         data = serializer.validated_data
-        result = services.create_booking(
-            customer=request.user,
-            service_id=data["service_id"],
-            provider_id=data["provider_id"],
-            start_at=data["start_at"],
-            note=data["note"],
-            idempotency_key=key,
-        )
+        common = {
+            "customer": request.user,
+            "service_id": data["service_id"],
+            "start_at": data["start_at"],
+            "note": data["note"],
+            "idempotency_key": key,
+        }
+        if data.get("provider_id") is None:
+            result = services.create_booking_any(**common)
+        else:
+            result = services.create_booking(provider_id=data["provider_id"], **common)
         booking = selectors.booking_with_history(pk=result.booking.pk)
         if result.replayed:
             return self._render(

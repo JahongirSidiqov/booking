@@ -5,6 +5,7 @@ parameters so every step has a shareable URL and the back button behaves.
 """
 
 import uuid
+from dataclasses import dataclass
 from datetime import date, timedelta
 from zoneinfo import ZoneInfo
 
@@ -50,7 +51,34 @@ def _service_or_404(slug):
     return service
 
 
+@dataclass(frozen=True)
+class AnyProvider:
+    """Stands in for a provider in the templates when the customer lets us choose."""
+
+    pk: str = "any"
+    name: str = "Istalgan xodim"
+    bio: str = "Eng birinchi boʻsh xodim — tizim oʻzi tanlaydi"
+    is_any: bool = True
+
+
+ANY = AnyProvider()
+
+
+def _days(service, provider, **kwargs):
+    if provider is ANY:
+        return scheduling_selectors.any_provider_days_summary(service=service, **kwargs)
+    return scheduling_selectors.days_summary(service=service, provider=provider, **kwargs)
+
+
+def _slots(service, provider, **kwargs):
+    if provider is ANY:
+        return scheduling_selectors.any_provider_day_slots(service=service, **kwargs)
+    return scheduling_selectors.day_slots(service=service, provider=provider, **kwargs)
+
+
 def _provider_for(service, raw_id):
+    if raw_id == "any":
+        return ANY if scheduling_selectors.offering_providers(service=service) else None
     try:
         provider_id = uuid.UUID(str(raw_id))
     except ValueError:
@@ -106,9 +134,9 @@ def _time_context(request, service, provider) -> dict:
     week = parse_date(request.GET.get("week") or "") or selected or today
     week = min(max(week, today), last_day)
 
-    counts = scheduling_selectors.days_summary(
-        service=service,
-        provider=provider,
+    counts = _days(
+        service,
+        provider,
         date_from=week,
         date_to=week + timedelta(days=STRIP_DAYS - 1),
         tz=tz,
@@ -117,9 +145,7 @@ def _time_context(request, service, provider) -> dict:
     if selected is None or not week <= selected < week + timedelta(days=STRIP_DAYS):
         selected = next((d for d, n in counts if n), week)
 
-    slots = scheduling_selectors.day_slots(
-        service=service, provider=provider, date_local=selected, tz=tz, now=now
-    )
+    slots = _slots(service, provider, date_local=selected, tz=tz, now=now)
     zone = ZoneInfo(tz)
     groups = {key: [] for key, _ in DAY_PARTS}
     for slot in slots:
@@ -135,9 +161,9 @@ def _time_context(request, service, provider) -> dict:
     if not slots:
         horizon = min(selected + timedelta(days=30), last_day)
         if selected < horizon:
-            ahead = scheduling_selectors.days_summary(
-                service=service,
-                provider=provider,
+            ahead = _days(
+                service,
+                provider,
                 date_from=selected + timedelta(days=1),
                 date_to=horizon,
                 tz=tz,
@@ -208,9 +234,7 @@ def _confirm(request, service, provider):
     local_date = start_at.astimezone(ZoneInfo(tz)).date()
     available = {
         s.start_at
-        for s in scheduling_selectors.day_slots(
-            service=service, provider=provider, date_local=local_date, tz=tz, now=timezone.now()
-        )
+        for s in _slots(service, provider, date_local=local_date, tz=tz, now=timezone.now())
     }
     if start_at not in available:
         messages.error(request, "Bu vaqt endi boʻsh emas. Boshqa vaqtni tanlang.")
@@ -256,15 +280,18 @@ def confirm(request, slug):
             return redirect(_step_url(service))
         return redirect(_step_url(service, provider=provider.pk))
     data = form.cleaned_data
+    common = {
+        "customer": request.user,
+        "service_id": service.pk,
+        "start_at": data["start_at"],
+        "note": data["note"],
+        "idempotency_key": data["idempotency_key"],
+    }
     try:
-        result = booking_services.create_booking(
-            customer=request.user,
-            service_id=service.pk,
-            provider_id=data["provider"],
-            start_at=data["start_at"],
-            note=data["note"],
-            idempotency_key=data["idempotency_key"],
-        )
+        if data["provider"] is None:
+            result = booking_services.create_booking_any(**common)
+        else:
+            result = booking_services.create_booking(provider_id=data["provider"], **common)
     except DomainError as exc:
         local_date = data["start_at"].astimezone(ZoneInfo(request.display_tz)).date()
         if exc.code == "SLOT_TAKEN":
@@ -273,7 +300,12 @@ def confirm(request, slug):
             messages.error(request, exc.message)
         if exc.code in RETRY_TIME_CODES:
             return redirect(
-                _step_url(service, provider=data["provider"], week=local_date, date=local_date)
+                _step_url(
+                    service,
+                    provider=data["provider"] or ANY.pk,
+                    week=local_date,
+                    date=local_date,
+                )
             )
         return redirect("web:home")
     return redirect("web:book_done", slug=service.slug, booking_id=result.booking.pk)
